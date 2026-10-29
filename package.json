@@ -1,0 +1,9 @@
+{
+  "name": "dispersiones-mxk-gt",
+  "private": true,
+  "version": "1.0.0",
+  "scripts": {
+    "start": "npx serve public"
+  }
+}
+
