@@ -44,9 +44,10 @@ def local_time(value):
 
 def status_from_buro(value):
     text = clean(value, "").upper()
-    if text in {"APROBADO", "SEGUIR PROCESO"}:
+    # Coincide con los campos calculados de Looker Studio: igualdad exacta.
+    if text == "APROBADO":
         return "APROBADO"
-    if "RECHAZ" in text or text == "SCORE NO ACEPTADO":
+    if text == "RECHAZADO":
         return "RECHAZADO"
     return "NO TERMINO PROCESO"
 
@@ -69,17 +70,62 @@ def connect():
     return pymysql.connect(**options)
 
 
-REQUESTS_SQL = f"""
-SELECT f.id AS id_flujo, f.fechaCreacion AS fecha, cb.estatusBuro AS buro,
-       TRIM(ofc.formularioCapturaJson) AS formulario, d.nombre AS distribuidor, s.nombre AS sucursal
-FROM `originador-dev`.originacion_flujo f
-JOIN `originador-dev`.originacion_formulario_captura ofc ON ofc.id=f.idOriginacionFormularioCaptura
-LEFT JOIN `originador-dev`.originacion_consulta_buro ocb ON ocb.id=f.idOriginacionConsultaBuro
-LEFT JOIN `originador-dev`.consulta_buro cb ON cb.id=ocb.idConsultaBuro
-LEFT JOIN usuario u ON u.pk_usuario=f.fk_usuario_creacion
-LEFT JOIN sucursal s ON s.pk_sucursal=u.fk_sucursal
-LEFT JOIN distribuidor d ON d.pk_distribuidor=s.fk_distribuidor
-WHERE f.fechaCreacion >= '{YEAR}-01-01 06:00:00' AND f.fechaCreacion < '{YEAR + 1}-01-01 06:00:00'
+# Consulta copiada de la conexión GT_solicitudes de Looker Studio.
+# La CTE clientes_unicos es la diferencia determinante: conserva un solo
+# flujo (el más reciente) por docIdent antes de contar los indicadores.
+REQUESTS_SQL = """
+WITH clientes_unicos AS (
+  SELECT MAX(og.id) AS id_flujo
+  FROM `originador-dev`.originacion_flujo og
+  INNER JOIN `originador-dev`.originacion_formulario_captura rfc
+    ON og.id = rfc.idOriginacionFlujo
+  WHERE rfc.formularioCapturaJson ->> '$.docIdent' IS NOT NULL
+  GROUP BY rfc.formularioCapturaJson ->> '$.docIdent'
+), oferta_unica AS (
+  SELECT idOriginacionFlujo, MAX(id) AS id_oferta
+  FROM `originador-dev`.originacion_ofertas
+  GROUP BY idOriginacionFlujo
+)
+SELECT og.id AS solicitud, og.idOferta,
+  DATE(DATE_SUB(og.fechaCreacion, INTERVAL 6 HOUR)) AS fecha_solicitud,
+  WEEKOFYEAR(og.fechaCreacion) AS num_semana,
+  (YEAR(og.fechaCreacion) * 100) + WEEKOFYEAR(og.fechaCreacion) AS yw,
+  CASE WHEN cb.estatusBuro IS NULL THEN 'NO TERMINO PROCESO' ELSE cb.estatusBuro END AS buro,
+  u.pk_usuario,
+  UPPER(CONCAT_WS(' ', u.primer_nombre, u.segundo_nombre, u.apellido_paterno, u.apellido_materno)) AS usuario,
+  s.pk_sucursal, UPPER(s.nombre) AS sucursal,
+  d.pk_distribuidor, UPPER(d.nombre) AS distribuidor,
+  IF(og.idOriginacionIdCard IS NOT NULL OR og.idConsultaValidacionIdentidad IS NOT NULL, 1, 0) AS valIdentidad,
+  1 AS cantidad,
+  rfc.formularioCapturaJson ->> '$.docIdent' AS doc_ident,
+  CONCAT_WS(' ', rfc.formularioCapturaJson ->> '$.primerNombre', rfc.formularioCapturaJson ->> '$.segundoNombre', rfc.formularioCapturaJson ->> '$.primerApellido', rfc.formularioCapturaJson ->> '$.segundoApellido') AS cliente,
+  IF(og.idOriginacionFormularioCaptura IS NULL, 0, 1) AS enviaFormulario,
+  IF(og.idOriginacionNip IS NULL, 0, 1) AS envioNip,
+  IF(og.idOriginacionConfirmacionNip IS NULL, 0, 1) AS confirmaNip,
+  IF(og.idOriginacionConsultaBuro IS NULL, 0, 1) AS respuestaBuro,
+  IF(o1.estatusMaxi IS NULL, 0, 1) AS sinOferta,
+  CASE
+    WHEN og.idOriginacionIdCard IS NULL AND og.idConsultaValidacionIdentidad IS NULL
+      AND og.idOriginacionFormularioCaptura IS NULL AND og.idOriginacionConfirmacionNip IS NULL
+      AND og.idOriginacionConsultaBuro IS NULL THEN '1 Sin Proceso'
+    WHEN og.idOriginacionFormularioCaptura IS NULL THEN '2 Sin Formulario'
+    WHEN og.idOriginacionConfirmacionNip IS NULL THEN '3 No confirma NIP'
+    WHEN og.idOriginacionConsultaBuro IS NULL THEN '4 Sin Respuesta Buro'
+    WHEN cb.estatusBuro LIKE '%RECHAZADO%' THEN '5 Rechazado'
+    WHEN o1.estatusMaxi IS NULL THEN '6 No selecciona Oferta'
+    ELSE '7 Completo'
+  END AS seguimiento
+FROM clientes_unicos cu
+INNER JOIN `originador-dev`.originacion_flujo og ON cu.id_flujo = og.id
+LEFT JOIN `originador-dev`.originacion_consulta_buro ocb ON og.id = ocb.idOriginacionFlujo
+LEFT JOIN `originador-dev`.originacion_formulario_captura rfc ON og.id = rfc.idOriginacionFlujo
+LEFT JOIN `originador-dev`.consulta_buro cb ON ocb.idConsultaBuro = cb.id
+LEFT JOIN `maxi-prod`.usuario u ON og.fk_usuario_creacion = u.pk_usuario
+LEFT JOIN `maxi-prod`.sucursal s ON u.fk_sucursal = s.pk_sucursal
+LEFT JOIN `maxi-prod`.distribuidor d ON s.fk_distribuidor = d.pk_distribuidor
+LEFT JOIN oferta_unica ou ON og.id = ou.idOriginacionFlujo
+LEFT JOIN `originador-dev`.originacion_ofertas o1 ON ou.id_oferta = o1.id
+WHERE u.pk_usuario NOT IN (1,2,4,5,7,8,13,16,17,36,38)
 """
 
 OFFERS_SQL = """
@@ -123,36 +169,22 @@ def main():
             cursor.execute(REQUESTS_SQL); raw_requests = list(cursor.fetchall())
             cursor.execute(OFFERS_SQL); offers = list(cursor.fetchall())
 
-    offer_months = set()
     requests = []
-    for offer in offers:
-        dt = local_time(offer["fecha_oferta"])
-        if not dt or dt.year != YEAR: continue
-        dpi = clean(offer.get("dpi"), "")
-        if dpi: offer_months.add((dpi, dt.year, dt.month))
+    for item in raw_requests:
+        raw_date = item.get("fecha_solicitud")
+        if isinstance(raw_date, datetime): raw_date = raw_date.date()
+        if not isinstance(raw_date, date): continue
+        buro = clean(item.get("buro"), "NO TERMINO PROCESO").upper()
         requests.append({
-            "date": dt.date().isoformat(), "status": status_from_buro(offer.get("buro")),
-            "distributor": clean(offer.get("distribuidor"), "SIN DISTRIBUIDOR"),
-            "branch": clean(offer.get("sucursal"), "SIN SUCURSAL"), "source": "oferta",
-        })
-
-    # Keep one originator request per day/form; Looker itself counts unique requests.
-    seen = set()
-    for item in sorted(raw_requests, key=lambda x: x["fecha"], reverse=True):
-        dt = local_time(item["fecha"])
-        if not dt or dt.year != YEAR: continue
-        marker = (item["id_flujo"], dt.date())
-        if marker in seen: continue
-        seen.add(marker)
-        # If originator provided a DPI in its JSON, the existing offers query is the authority.
-        requests.append({
-            "date": dt.date().isoformat(), "status": status_from_buro(item.get("buro")),
+            "id": item.get("solicitud"), "date": raw_date.isoformat(), "buro": buro,
+            "status": status_from_buro(buro), "week": item.get("yw"),
+            "followup": clean(item.get("seguimiento")),
             "distributor": clean(item.get("distribuidor"), "SIN DISTRIBUIDOR"),
-            "branch": clean(item.get("sucursal"), "SIN SUCURSAL"), "source": "originador",
+            "branch": clean(item.get("sucursal"), "SIN SUCURSAL"),
+            "user": clean(item.get("usuario"), "SIN USUARIO"), "doc": clean(item.get("doc_ident"), ""),
+            "client": clean(item.get("cliente"), ""), "offerId": item.get("idOferta"),
         })
 
-    # The two sources overlap in Looker. De-duplicate by flow/date where possible, then expose a
-    # transparent count. Exact historical alignment can be tuned without changing the website.
     daily = defaultdict(lambda: {"total": 0, "approved": 0, "rejected": 0, "unfinished": 0})
     for row in requests:
         daily[row["date"]]["total"] += 1
