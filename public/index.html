@@ -102,10 +102,25 @@
 .table-panel td{border-top:1px solid #e8eaf0}.table-panel tbody tr:nth-child(even){background:#f6f8fa}
 .detail .table-scroll{max-height:320px}.detail .table-panel{margin-bottom:25px}
 @media(max-width:800px){html,body{max-width:100%;overflow-x:hidden}.sheet{width:100%;max-width:100%;overflow:hidden}.table-heading{font-size:14px}.table-panel{width:100%}.table-panel .wrap{overflow-x:auto}.table-panel table{width:max-content;min-width:100%;font-size:12px}.table-panel th,.table-panel td{padding:8px}.table-panel .table-scroll{max-height:300px}.detail .table-scroll{max-height:280px}.excel-icon{width:32px;height:32px}.cards{gap:10px}}
+
+    /* Encabezado institucional: imágenes oficiales, sin alterar el resto del dashboard */
+    .mast{grid-template-columns:minmax(0,1fr) minmax(0,2fr) minmax(0,1fr);align-items:center;gap:18px}
+    .brand{display:flex;align-items:center;min-width:0}
+    .brand-logo{display:block;width:min(100%,310px);height:auto;max-height:86px;object-fit:contain;object-position:left center}
+    .flag{display:flex;justify-self:end;align-items:center}
+    .flag-image{display:block;width:94px;height:63px;object-fit:cover;border:1px solid #e6e6e6}
+    @media(max-width:800px){
+      .mast{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:center;gap:10px;height:auto;margin-bottom:12px}
+      .brand{grid-column:1;grid-row:1}.brand-logo{width:min(100%,230px);max-height:64px}
+      .flag{display:flex;grid-column:2;grid-row:1;justify-self:end}
+      .flag-image{width:66px;height:44px}
+      .mast .title{grid-column:1 / -1;grid-row:2;text-align:center;font-size:clamp(22px,6vw,30px)}
+    }
+    @media(max-width:360px){.brand-logo{width:min(100%,190px)}.flag-image{width:55px;height:37px}}
 </style>
 </head>
 <body><main class="sheet">
-  <header class="mast"><div class="brand"><span></span>Maxikash</div><h1 class="title" id="heading">Solicitudes Únicas Totales</h1><div class="flag">🇬🇹</div></header>
+  <header class="mast"><div class="brand"><img src="/logo-maxikash.png" alt="Maxikash" class="brand-logo"></div><h1 class="title" id="heading">Solicitudes Únicas Totales</h1><div class="flag"><img src="/bandera-guatemala.jpg" alt="Bandera de Guatemala" class="flag-image"></div></header>
   <nav class="tabs" id="tabs"></nav><div class="filters"><label>Mes <input id="month" type="month"></label><label>Distribuidor <select id="distributor"></select></label><label>Sucursal <select id="branch"></select></label><button id="apply">Aplicar</button><span id="status" role="status"></span></div><section id="view"></section>
 </main>
 <script src="/dashboard.js" defer></script></body></html>
