@@ -142,6 +142,20 @@ export function validatePublic(data) {
   return data;
 }
 
+export function anonymizeUsers(data) {
+  const aliases = new Map();
+  let nextAlias = 1;
+
+  return {
+    ...data,
+    requests: data.requests.map((row) => {
+      const key = row.user.trim();
+      if (!aliases.has(key)) aliases.set(key, `Usuario ${nextAlias++}`);
+      return { ...row, user: aliases.get(key) };
+    })
+  };
+}
+
 export default async function handler(req, res) {
   res.setHeader('Cache-Control', 'no-store');
   res.setHeader('Content-Type', 'application/json; charset=utf-8');
@@ -173,7 +187,7 @@ export default async function handler(req, res) {
 
     const data = await response.json();
 
-    return res.end(JSON.stringify(validatePublic(data)));
+    return res.end(JSON.stringify(validatePublic(anonymizeUsers(data))));
 
   } catch (error) {
     console.error('MAXIKASH /api/data:', error.message);

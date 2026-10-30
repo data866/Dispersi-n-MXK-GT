@@ -1,9 +1,13 @@
 import {test} from 'node:test';import assert from 'node:assert/strict';import fs from 'node:fs';import vm from 'node:vm';import {createHash} from 'node:crypto';import {JSDOM} from 'jsdom';
-import handler,{validatePublic} from '../api/data.mjs';
+import handler,{anonymizeUsers,validatePublic} from '../api/data.mjs';
 function fixture(){return {schemaVersion:3,source:'Google Sheets / Apps Script',updatedAt:'2026-10-29T12:00:00-06:00',requests:[{date:'2026-10-10',week:'202641',distributor:'A',branch:'X',user:'Usuario 1',followup:'7 Completo',total:30,approved:10,rejected:18,unfinished:2},{date:'2026-10-11',week:'202641',distributor:'B',branch:'Y',user:'Usuario 2',followup:'5 Rechazado',total:30,approved:10,rejected:18,unfinished:2}],dispersions:[{date:'2026-10-10',distributor:'A',branch:'X',credits:2,amount:100,pagare:1.7,montoActivado:1,hasFactorData:true},{date:'2026-09-10',distributor:'B',branch:'Y',credits:3,amount:200,pagare:0,montoActivado:0,hasFactorData:false}],offers:[{month:'2026-10',distributor:'A',branch:'X',stage:'CUALQUIERA',brand:'Marca',model:'Modelo',total:3,activated:2,amount:100}],historicalTotals:{requests:{total:60,approved:20,rejected:36,unfinished:4},activations:5,sales:300},monthlyTargets:{'2026-10':850000},dailyTargets:{'2026-10-01':850000}};}
 test('public schema rejects customer fields, arbitrary nested fields, email labels and inconsistent totals',()=>{
   assert.equal(validatePublic(fixture()).historicalTotals.activations,5);
   for(const mutate of [d=>d.requests[0].client='PRIVATE',d=>d.offers[0].id='PRIVATE',d=>d.secret='PRIVATE',d=>d.requests[0].branch='a@example.com',d=>d.historicalTotals.sales='PRIVATE',d=>d.requests[0].total=1]){const d=fixture();mutate(d);assert.throws(()=>validatePublic(d));}
+});
+test('users are replaced with stable aliases in each public response',()=>{
+  const d=fixture();d.requests[0].user='Nombre privado';d.requests[1].user='Nombre privado';
+  const safe=anonymizeUsers(d);assert.deepEqual(safe.requests.map(r=>r.user),['Usuario 1','Usuario 1']);assert.equal(d.requests[0].user,'Nombre privado');
 });
 test('original CSS and four tabs; weighted historical counts; monthly projection and filters',async()=>{
   const html=fs.readFileSync('public/index.html','utf8'),css=html.split('<style>')[1].split('</style>')[0].replace(/\r\n/g,'\n');assert.equal(createHash('sha256').update(css).digest('hex'),fs.readFileSync('original-style.sha256','utf8').trim());
