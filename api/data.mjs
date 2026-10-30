@@ -20,7 +20,7 @@ const numericFields = new Set([
   'pagare', 'montoActivado'
 ]);
 
-function validatePublic(data) {
+export function validatePublic(data) {
   if (!data || data.schemaVersion !== 3) {
     throw new Error('Formato no válido');
   }
