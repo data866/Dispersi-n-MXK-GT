@@ -4,21 +4,47 @@
   <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Dispersión MXK GT</title>
   <style>
-    :root{--blue:#4285f4;--title:#000099;--text:#666;--line:#e7e7e7}*{box-sizing:border-box}
-    body{margin:0;background:#f7f7f7;font-family:Arial,sans-serif;color:var(--text)}
+    :root{--blue:#0047BB;--title:#00358E;--text:#545859;--line:#D9D9D6;--yellow:#D2D755}*{box-sizing:border-box}
+    body{margin:0;background:#f3f5f8;font-family:Arial,sans-serif;color:var(--text)}
     .sheet{max-width:1450px;margin:0 auto;background:#fff;min-height:100vh;padding:26px 4vw 42px;box-shadow:0 0 7px #bbb}
-    .mast{height:112px;display:grid;grid-template-columns:1fr 2fr 1fr;align-items:start}.brand{font-size:38px;font-weight:700;color:#0752be;letter-spacing:-2px}.brand span{display:inline-block;border:7px solid #0752be;width:31px;height:31px;transform:rotate(45deg);margin-right:12px;vertical-align:9px}.title{font-size:44px;font-weight:700;color:var(--title);text-align:center;margin:0}.flag{justify-self:end;font-size:52px}
-    .tabs{display:flex;justify-content:center;gap:28px;border-bottom:1px solid #eee;margin:2px -4vw 26px;padding:0 12px}.tabs button{background:none;border:0;border-bottom:3px solid transparent;padding:13px 3px 12px;color:#334f88;font-size:14px;cursor:pointer}.tabs button.active{color:#0a45bb;border-bottom-color:#0a45bb;font-weight:700}
+    .mast{height:112px;display:grid;grid-template-columns:1fr 2fr 1fr;align-items:start}.brand{font-size:38px;font-weight:700;color:var(--blue);letter-spacing:-2px}.brand span{display:inline-block;border:7px solid var(--blue);width:31px;height:31px;transform:rotate(45deg);margin-right:12px;vertical-align:9px}.title{font-size:44px;font-weight:700;color:var(--title);text-align:center;margin:0}.flag{justify-self:end;font-size:52px}
+    .tabs{display:flex;justify-content:center;gap:28px;border-bottom:1px solid #eee;margin:2px -4vw 26px;padding:0 12px}.tabs button{background:none;border:0;border-bottom:3px solid transparent;padding:13px 3px 12px;color:#00358E;font-size:14px;cursor:pointer}.tabs button.active{color:var(--blue);border-bottom-color:var(--yellow);font-weight:700}
     .cards{display:grid;grid-template-columns:repeat(5,1fr);gap:24px;margin:12px 8% 38px}.card{text-align:center}.card h2{font-size:22px;margin:0 0 9px;color:#555}.card div{background:#fafafa;border-radius:5px;padding:13px 8px;font-size:34px;color:#666;box-shadow:0 2px 5px #aaa}
     .cards.four{grid-template-columns:repeat(4,1fr);margin-left:0;margin-right:0}.cards.four .card div{color:#1265c5}.cards.four .card h2{color:#111}
-    .caption{font-size:14px;font-weight:700;color:#000099;text-align:center;margin:16px 0 10px}.wrap{overflow:auto;margin:0 1% 27px;border-radius:4px;box-shadow:0 1px 3px #888}.wide{min-width:900px}
-    table{border-collapse:separate;border-spacing:0;width:100%;font-size:16px;color:#666}th{background:var(--blue);padding:9px 11px;color:white;text-align:left;font-weight:700;white-space:nowrap}td{padding:9px 11px;border-top:5px solid #eee;white-space:nowrap}td.num,th.num{text-align:right}.total td{font-weight:700}.pivot th:first-child,.pivot td:first-child{min-width:200px;text-align:center}.pivot tbody td:first-child{background:var(--blue);color:#fff;font-weight:700}.pivot tbody tr:last-child td:first-child{background:#fff;color:#666}.head2 th{background:#fff;color:#666;border-top:0;text-align:center;font-weight:400}.head2 th:first-child{text-align:left}.empty{text-align:center;padding:28px;color:#777}
+    .caption{font-size:14px;font-weight:700;color:var(--title);text-align:center;margin:16px 0 10px}.wrap{overflow:auto;margin:0 1% 27px;border-radius:4px;box-shadow:0 1px 3px #888}.wide{min-width:900px}
+    table{border-collapse:separate;border-spacing:0;width:100%;font-size:16px;color:#666}th{background:var(--yellow);padding:9px 11px;color:#00358E;text-align:left;font-weight:700;white-space:nowrap}td{padding:9px 11px;border-top:5px solid #eee;white-space:nowrap}td.num,th.num{text-align:right}.total td{font-weight:700}.pivot th:first-child,.pivot td:first-child{min-width:200px;text-align:center}.pivot tbody td:first-child{background:var(--blue);color:#fff;font-weight:700}.pivot tbody tr:last-child td:first-child{background:#fff;color:#666}.head2 th{background:#fff;color:#666;border-top:0;text-align:center;font-weight:400}.head2 th:first-child{text-align:left}.empty{text-align:center;padding:28px;color:#777}
     .report-title{font-size:42px;color:var(--title);font-weight:700;text-align:center;margin:0 0 38px}.detail .wrap{box-shadow:none;border-radius:0}.detail table{min-width:1250px}.detail th,.detail td{padding:8px 10px}.detail td{border-top:5px solid #eee}
     @media(max-width:800px){.sheet{padding:18px}.mast{height:auto;grid-template-columns:1fr;gap:10px}.title{text-align:left;font-size:32px}.flag{display:none}.brand{font-size:28px}.cards,.cards.four{grid-template-columns:repeat(2,1fr);margin:10px 0 25px;gap:12px}.card h2{font-size:16px}.card div{font-size:25px}.tabs{margin-left:-18px;margin-right:-18px;gap:14px;overflow:auto;justify-content:flex-start}.tabs button{white-space:nowrap}}
+
+    /* MAXIKASH: tarjetas institucionales, todas alineadas */
+    .cards{margin:16px 0 34px;gap:16px}
+    .card{display:flex;flex-direction:column;min-width:0;background:#fff;border-radius:15px;overflow:hidden;box-shadow:0 3px 10px #00358e20;border:1px solid #e7eaf0}
+    .card h2,.cards.four .card h2{margin:0;min-height:66px;padding:12px 8px;background:var(--blue);color:white;font-size:17px;line-height:1.25;display:flex;align-items:center;justify-content:center;text-align:center}
+    .card:nth-child(even) h2{background:var(--yellow);color:var(--title)}
+    .card div,.cards.four .card div{flex:1;min-height:86px;display:flex;align-items:center;justify-content:center;border:0;border-radius:0;box-shadow:none;background:#fff;color:var(--blue);font-size:34px;font-weight:700}
+    .cards.four{gap:16px}
+    /* Filtros redondeados */
+    .filters{display:flex;gap:14px;align-items:end;flex-wrap:wrap;margin:0 0 20px}
+    .filters label{display:flex;flex-direction:column;gap:6px;font-size:14px;font-weight:700;color:#26344d}
+    .filters input,.filters select{border:1px solid #c8ceea;border-radius:12px;padding:10px 13px;background:white;color:#26344d;font:inherit;min-height:43px}
+    .filters #distributor,.filters #branch{min-width:190px}
+    #apply{border:0;background:var(--blue);color:white;border-radius:12px;padding:12px 22px;font-weight:700;cursor:pointer}
+    #apply:hover{background:var(--title)}
+    #status{font-size:13px;color:#545859;align-self:center}
+    /* Tabla de sucursales: recuadro con desplazamiento interno */
+    .branch-panel{margin:16px 1% 30px;border:1px solid #e3e8f0;border-radius:16px;box-shadow:0 3px 12px #00358e18;overflow:hidden}
+    .branch-panel .branch-title{margin:0;background:var(--blue);color:white;padding:15px 20px;font-size:19px;font-weight:700}
+    .branch-panel .wrap.branch-scroll{margin:0;max-height:370px;overflow-y:auto;overflow-x:auto;border-radius:0;box-shadow:none}
+    .branch-panel .branch-scroll th{position:sticky;top:0;z-index:2;background:var(--yellow);color:var(--title)}
+    .branch-panel .branch-scroll td{border-top:1px solid #e8eaf0}
+    .branch-panel .branch-scroll tr:nth-child(even){background:#f4f6f8}
+    .branch-panel .branch-scroll::-webkit-scrollbar{width:11px}
+    .branch-panel .branch-scroll::-webkit-scrollbar-thumb{background:#9d9c9e;border-radius:12px;border:2px solid white}
+    @media(max-width:800px){.cards .card h2{font-size:14px;min-height:64px}.cards .card div{font-size:26px}.filters label{flex:1 1 140px}.filters #distributor,.filters #branch{min-width:0;width:100%}}
   </style>
 </head>
 <body><main class="sheet">
   <header class="mast"><div class="brand"><span></span>Maxikash</div><h1 class="title" id="heading">Solicitudes Únicas Totales</h1><div class="flag">🇬🇹</div></header>
-  <nav class="tabs" id="tabs"></nav><div style="display:flex;gap:12px;flex-wrap:wrap;margin-bottom:20px"><label>Mes <input id="month" type="month"></label><label>Distribuidor <select id="distributor"></select></label><label>Sucursal <select id="branch"></select></label><button id="apply">Aplicar</button><span id="status" role="status"></span></div><section id="view"></section>
+  <nav class="tabs" id="tabs"></nav><div class="filters"><label>Mes <input id="month" type="month"></label><label>Distribuidor <select id="distributor"></select></label><label>Sucursal <select id="branch"></select></label><button id="apply">Aplicar</button><span id="status" role="status"></span></div><section id="view"></section>
 </main>
 <script src="/dashboard.js" defer></script></body></html>
