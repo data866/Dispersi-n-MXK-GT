@@ -1,0 +1,6 @@
+.env*
+tests/
+apps-script/
+scripts/
+test-public-api.cjs
+original-style.sha256
