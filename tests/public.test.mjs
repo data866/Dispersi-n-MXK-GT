@@ -9,6 +9,15 @@ test('validated user names remain unchanged for the restricted dashboard',()=>{
   const d=fixture();d.requests[0].user='María López';d.requests[1].user='José Pérez';
   const validated=validatePublic(d);assert.deepEqual(validated.requests.map(r=>r.user),['María López','José Pérez']);
 });
+test('API accepts identified client aggregates and rejects personal fields inside them',()=>{
+  const d=fixture();
+  d.clientMetrics={basis:'request-history',updatedAt:d.updatedAt,snapshotAt:d.updatedAt,rows:[{
+    month:'2026-10',periodEnd:'2026-10-29',distributor:null,branch:null,totalRequests:60,
+    identifiedRequests:50,uniqueClients:20,repeatClients:10,missingIdentityRequests:10,contradictionRequests:2
+  }]};
+  assert.equal(validatePublic(d).clientMetrics.rows[0].identifiedRequests,50);
+  d.clientMetrics.rows[0].doc_ident='private';assert.throws(()=>validatePublic(d));
+});
 test('original CSS and four tabs; weighted historical counts; monthly projection and filters',async()=>{
   const html=fs.readFileSync('public/index.html','utf8'),css=html.split('<style>')[1].split('</style>')[0].replace(/\r\n/g,'\n');assert.equal(createHash('sha256').update(css).digest('hex'),fs.readFileSync('original-style.sha256','utf8').trim());
   const dom=new JSDOM(html,{url:'http://localhost:3000',runScripts:'outside-only'}),w=dom.window;

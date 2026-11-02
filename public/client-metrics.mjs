@@ -1,14 +1,19 @@
 // Contrato de conteos agregados. Nunca admite identificadores de clientes.
 export function validateClientMetrics(metrics, updatedAt) {
-  const exact = (value, keys) => value && typeof value === 'object' && !Array.isArray(value) &&
-    Object.keys(value).sort().join(',') === [...keys].sort().join(',');
-  if (!exact(metrics, ['basis', 'updatedAt', 'rows']) || metrics.basis !== 'request-history' ||
+  const optionalKeys = (value, required, optional) => value && typeof value === 'object' && !Array.isArray(value) &&
+    required.every(k => k in value) && Object.keys(value).every(k => required.includes(k) || optional.includes(k));
+  if (!optionalKeys(metrics, ['basis', 'updatedAt', 'rows'], ['snapshotAt']) || metrics.basis !== 'request-history' ||
       metrics.updatedAt !== updatedAt || !Array.isArray(metrics.rows) || metrics.rows.length > 100000) {
     throw new Error('Conteos de clientes no verificables');
   }
+  if (metrics.snapshotAt !== undefined && (!/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}-06:00$/.test(metrics.snapshotAt) ||
+      !Number.isFinite(Date.parse(metrics.snapshotAt)) || Date.parse(metrics.snapshotAt) > Date.parse(updatedAt))) {
+    throw new Error('Corte del historial inválido');
+  }
   const seen = new Set();
   for (const row of metrics.rows) {
-    if (!exact(row, ['month', 'periodEnd', 'distributor', 'branch', 'totalRequests', 'uniqueClients', 'missingIdentityRequests']) ||
+    if (!optionalKeys(row, ['month', 'periodEnd', 'distributor', 'branch', 'totalRequests', 'uniqueClients', 'missingIdentityRequests'],
+        ['identifiedRequests', 'repeatClients', 'contradictionRequests', 'recoveredRequests']) ||
         !/^\d{4}-(0[1-9]|1[0-2])$/.test(row.month) ||
         !/^\d{4}-\d{2}-\d{2}$/.test(row.periodEnd) ||
         row.periodEnd.slice(0, 7) !== row.month || row.periodEnd > updatedAt.slice(0, 10) ||
@@ -19,6 +24,15 @@ export function validateClientMetrics(metrics, updatedAt) {
         (row.totalRequests > row.missingIdentityRequests && row.uniqueClients === 0)) {
       throw new Error('Conteo de clientes inválido');
     }
+    const identified = row.totalRequests - row.missingIdentityRequests;
+    for (const field of ['identifiedRequests','repeatClients','contradictionRequests','recoveredRequests']) {
+      if (row[field] !== undefined && (!Number.isSafeInteger(row[field]) || row[field] < 0)) throw new Error('Conteo identificado inválido');
+    }
+    if ((row.identifiedRequests !== undefined && row.identifiedRequests !== identified) ||
+        (row.repeatClients !== undefined && (row.repeatClients > row.uniqueClients || identified < row.uniqueClients + row.repeatClients || (identified > row.uniqueClients && row.repeatClients === 0))) ||
+        (row.contradictionRequests !== undefined && row.contradictionRequests > row.missingIdentityRequests) ||
+        (row.recoveredRequests !== undefined && row.recoveredRequests > identified) ||
+        (metrics.snapshotAt && row.periodEnd > metrics.snapshotAt.slice(0,10))) throw new Error('Historial identificado inconsistente');
     const key = JSON.stringify([row.month, row.distributor, row.branch]);
     const monthEnd = new Date(Date.UTC(+row.month.slice(0, 4), +row.month.slice(5), 0)).toISOString().slice(0, 10);
     const cutoff = updatedAt.slice(0, 10);
@@ -30,17 +44,21 @@ export function validateClientMetrics(metrics, updatedAt) {
 }
 
 export function clientMetrics(data, {month, distributor = '', branch = ''}, end) {
-  if (!data.clientMetrics) return {uniqueClients: null, requestsPerClient: null, consideredRequests: null,
-    clientMetricsReason: 'La fuente no entrega conteos verificables del historial de solicitudes.'};
+  if (!data.clientMetrics) return {uniqueClients: null, requestsPerClient: null, consideredRequests: null, identifiedRequests: null, repeatClients: null, identityCoverage: null, missingIdentityRequests: null,
+    clientMetricsReason: 'Pendiente de datos reales de clientes identificados en la API.'};
   const metrics = validateClientMetrics(data.clientMetrics, data.updatedAt);
   const row = metrics.rows.find(r => r.month === month && r.periodEnd === end &&
     r.distributor === (distributor || null) && r.branch === (branch || null));
-  if (!row) return {uniqueClients: null, requestsPerClient: null, consideredRequests: null,
+  if (!row) return {uniqueClients: null, requestsPerClient: null, consideredRequests: null, identifiedRequests: null, repeatClients: null, identityCoverage: null, missingIdentityRequests: null,
     clientMetricsReason: 'Falta el conteo del historial para este periodo y estos filtros.'};
-  const complete = row.missingIdentityRequests === 0;
-  return {uniqueClients: complete ? row.uniqueClients : null,
-    requestsPerClient: complete && row.uniqueClients > 0 ? row.totalRequests / row.uniqueClients : null,
+  const identified = row.totalRequests - row.missingIdentityRequests;
+  return {uniqueClients: row.uniqueClients,
+    repeatClients: row.repeatClients ?? null,
+    requestsPerClient: row.uniqueClients > 0 ? identified / row.uniqueClients : null,
     consideredRequests: row.totalRequests,
-    clientMetricsReason: complete ? (row.uniqueClients === 0 ? 'Sin solicitudes en este conjunto.' : '') :
-      `${row.missingIdentityRequests} solicitudes sin identificador; no se estima el número de clientes.`};
+    identifiedRequests: identified,
+    missingIdentityRequests: row.missingIdentityRequests,
+    identityCoverage: row.totalRequests > 0 ? identified / row.totalRequests * 100 : null,
+    contradictionRequests: row.contradictionRequests ?? null,
+    clientMetricsReason: row.totalRequests === 0 ? 'Sin solicitudes en este conjunto.' : ''};
 }

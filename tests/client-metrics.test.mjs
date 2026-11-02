@@ -36,7 +36,8 @@ test('all months, distributor, branch and pair filters match independent sets wi
 test('missing identifiers, missing periods, stale snapshots and forbidden fields fail without inventing clients', () => {
   const data = {updatedAt, clientMetrics: build([...events, event('r6', '')])};
   const m = clientMetrics(data, {month: '2026-10'}, '2026-10-31');
-  assert.equal(m.consideredRequests, 5); assert.equal(m.uniqueClients, null); assert.equal(m.requestsPerClient, null);
+  assert.equal(m.consideredRequests, 5); assert.equal(m.uniqueClients, 2); assert.equal(m.requestsPerClient, 2);
+  assert.equal(m.identifiedRequests, 4); assert.equal(m.identityCoverage, 80);
   assert.equal(clientMetrics(data, {month: '2026-09'}, '2026-09-30').consideredRequests, null);
   for (const mutate of [d => d.basis = 'latest-client-flow', d => d.updatedAt = '2026-10-01',
     d => d.rows[0].doc_ident = 'private', d => d.rows[0].uniqueClients = 999,
@@ -53,4 +54,32 @@ test('view uses the exact history denominator and formats average with two decim
   delete data.clientMetrics;
   assert.match(summaryView(data, {month: '2026-10'}), /No disponible/);
   assert.match(summaryView(data, {month: '2026-10'}), /Registros en vista actual: 0/);
+});
+
+test('identified aggregates: denominator, recurrence, coverage and exact filters', () => {
+  // Fixture exclusiva de pruebas; nunca se sirve al dashboard ni se presenta como dato real.
+  const row = {month:'2026-10',periodEnd:'2026-10-31',distributor:null,branch:null,
+    totalRequests:12,identifiedRequests:9,uniqueClients:4,repeatClients:3,
+    missingIdentityRequests:3,contradictionRequests:1,recoveredRequests:2};
+  const data = {updatedAt,requests:[],dispersions:[],clientMetrics:{basis:'request-history',updatedAt,
+    snapshotAt:'2026-11-02T12:52:08-06:00',rows:[row]}};
+  // El corte de lectura debe ser posterior al corte del historial.
+  data.updatedAt = data.clientMetrics.updatedAt = '2026-11-02T13:00:00-06:00';
+  const m = clientMetrics(data,{month:'2026-10'},'2026-10-31');
+  assert.equal(m.uniqueClients,4); assert.equal(m.repeatClients,3);
+  assert.equal(m.requestsPerClient.toFixed(2),'2.25');
+  assert.equal(m.identityCoverage.toFixed(2),'75.00');
+  assert.equal(m.identifiedRequests + m.missingIdentityRequests,m.consideredRequests);
+  const html = summaryView(data,{month:'2026-10'});
+  assert.match(html,/Recurrentes identificados: 3/);
+  assert.match(html,/Cobertura: 75.00%/);
+  assert.match(html,/Clientes únicos identificados/);
+  for (const filters of [{month:'2026-11'},{month:'2026-10',distributor:'D1'},{month:'2026-10',branch:'X'}]) {
+    assert.equal(clientMetrics(data,filters,filters.month==='2026-10'?'2026-10-31':'2026-11-02').uniqueClients,null);
+  }
+  for (const mutate of [r=>r.identifiedRequests++,r=>r.repeatClients=3000,r=>r.contradictionRequests=1200,
+    r=>r.recoveredRequests=4000,r=>r.doc_ident='private']) {
+    const bad=structuredClone(data.clientMetrics);mutate(bad.rows[0]);
+    assert.throws(()=>validateClientMetrics(bad,data.updatedAt));
+  }
 });
