@@ -1,64 +1,44 @@
-// Contrato de conteos agregados. Nunca admite identificadores de clientes.
+// Validación de agregados públicos: nunca recibe identificadores personales.
+const obj = x => x && typeof x === 'object' && !Array.isArray(x);
+const int = x => Number.isSafeInteger(x) && x >= 0;
+const safe = x => typeof x === 'string' && x.length > 0 && x.length <= 200 && !/@|\b\d{10,}\b/.test(x);
+const date = x => typeof x === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(x) && !Number.isNaN(Date.parse(x+'T00:00:00Z'));
+const exactKeys = (x, required) => obj(x) && required.every(k => Object.hasOwn(x,k)) && Object.keys(x).every(k => required.includes(k));
+const endOfMonth = m => new Date(Date.UTC(+m.slice(0,4),+m.slice(5),0)).toISOString().slice(0,10);
 export function validateClientMetrics(metrics, updatedAt) {
-  const optionalKeys = (value, required, optional) => value && typeof value === 'object' && !Array.isArray(value) &&
-    required.every(k => k in value) && Object.keys(value).every(k => required.includes(k) || optional.includes(k));
-  if (!optionalKeys(metrics, ['basis', 'updatedAt', 'rows'], ['snapshotAt']) || metrics.basis !== 'request-history' ||
-      metrics.updatedAt !== updatedAt || !Array.isArray(metrics.rows) || metrics.rows.length > 100000) {
-    throw new Error('Conteos de clientes no verificables');
+  if (!exactKeys(metrics,['coverage','cohorts']) || !Array.isArray(metrics.coverage) || !Array.isArray(metrics.cohorts) || metrics.coverage.length > 1200 || metrics.cohorts.length > 100000 || typeof updatedAt !== 'string' || !date(updatedAt.slice(0,10))) throw Error('Conteos de clientes no verificables');
+  const months=new Map();
+  for(const c of metrics.coverage){
+    if(!exactKeys(c,['month','periodEnd','snapshotAt']) || !/^\d{4}-(0[1-9]|1[0-2])$/.test(c.month) || !date(c.periodEnd) || c.periodEnd !== (endOfMonth(c.month)<updatedAt.slice(0,10)?endOfMonth(c.month):updatedAt.slice(0,10)) || typeof c.snapshotAt !== 'string' || !Number.isFinite(Date.parse(c.snapshotAt)) || Date.parse(c.snapshotAt)>Date.parse(updatedAt) || months.has(c.month)) throw Error('Cobertura de clientes inválida');
+    months.set(c.month,c.periodEnd);
   }
-  if (metrics.snapshotAt !== undefined && (!/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}-06:00$/.test(metrics.snapshotAt) ||
-      !Number.isFinite(Date.parse(metrics.snapshotAt)) || Date.parse(metrics.snapshotAt) > Date.parse(updatedAt))) {
-    throw new Error('Corte del historial inválido');
-  }
-  const seen = new Set();
-  for (const row of metrics.rows) {
-    if (!optionalKeys(row, ['month', 'periodEnd', 'distributor', 'branch', 'totalRequests', 'uniqueClients', 'missingIdentityRequests'],
-        ['identifiedRequests', 'repeatClients', 'contradictionRequests', 'recoveredRequests']) ||
-        !/^\d{4}-(0[1-9]|1[0-2])$/.test(row.month) ||
-        !/^\d{4}-\d{2}-\d{2}$/.test(row.periodEnd) ||
-        row.periodEnd.slice(0, 7) !== row.month || row.periodEnd > updatedAt.slice(0, 10) ||
-        ![row.distributor, row.branch].every(v => v === null || (typeof v === 'string' && v.length > 0 && v.length <= 200 && !/@|\b\d{10,}\b/.test(v))) ||
-        ![row.totalRequests, row.uniqueClients, row.missingIdentityRequests].every(v => Number.isSafeInteger(v) && v >= 0) ||
-        row.missingIdentityRequests > row.totalRequests ||
-        row.uniqueClients > row.totalRequests - row.missingIdentityRequests ||
-        (row.totalRequests > row.missingIdentityRequests && row.uniqueClients === 0)) {
-      throw new Error('Conteo de clientes inválido');
+  for(const c of metrics.cohorts){
+    if(!exactKeys(c,['month','periodEnd','kind','clientCount','cohortCount','requestsByDimension','snapshotAt']) || months.get(c.month)!==c.periodEnd || !['identified','ambiguous','missing'].includes(c.kind) || !int(c.clientCount) || !int(c.cohortCount) || c.cohortCount===0 || (c.kind==='identified' ? c.clientCount===0 || c.cohortCount>c.clientCount : c.clientCount!==0) || !Array.isArray(c.requestsByDimension) || c.requestsByDimension.length>10000 || typeof c.snapshotAt!=='string' || !Number.isFinite(Date.parse(c.snapshotAt)) || Date.parse(c.snapshotAt)>Date.parse(updatedAt)) throw Error('Cohorte de clientes inválida');
+    const seen=new Set(); let count=0;
+    for(const d of c.requestsByDimension){
+      if(!exactKeys(d,['distributor','branch','requests']) || !safe(d.distributor) || !safe(d.branch) || !int(d.requests) || !d.requests) throw Error('Dimensión de clientes inválida');
+      const k=JSON.stringify([d.distributor,d.branch]); if(seen.has(k)) throw Error('Dimensión duplicada'); seen.add(k); count+=d.requests;
     }
-    const identified = row.totalRequests - row.missingIdentityRequests;
-    for (const field of ['identifiedRequests','repeatClients','contradictionRequests','recoveredRequests']) {
-      if (row[field] !== undefined && (!Number.isSafeInteger(row[field]) || row[field] < 0)) throw new Error('Conteo identificado inválido');
-    }
-    if ((row.identifiedRequests !== undefined && row.identifiedRequests !== identified) ||
-        (row.repeatClients !== undefined && (row.repeatClients > row.uniqueClients || identified < row.uniqueClients + row.repeatClients || (identified > row.uniqueClients && row.repeatClients === 0))) ||
-        (row.contradictionRequests !== undefined && row.contradictionRequests > row.missingIdentityRequests) ||
-        (row.recoveredRequests !== undefined && row.recoveredRequests > identified) ||
-        (metrics.snapshotAt && row.periodEnd > metrics.snapshotAt.slice(0,10))) throw new Error('Historial identificado inconsistente');
-    const key = JSON.stringify([row.month, row.distributor, row.branch]);
-    const monthEnd = new Date(Date.UTC(+row.month.slice(0, 4), +row.month.slice(5), 0)).toISOString().slice(0, 10);
-    const cutoff = updatedAt.slice(0, 10);
-    if (row.periodEnd !== (monthEnd < cutoff ? monthEnd : cutoff)) throw new Error('Periodo de clientes incompleto');
-    if (seen.has(key)) throw new Error('Conteo de clientes duplicado');
-    seen.add(key);
+    if(c.kind==='identified' && count<c.clientCount) throw Error('Conteo identificado inconsistente');
   }
   return metrics;
 }
-
-export function clientMetrics(data, {month, distributor = '', branch = ''}, end) {
-  if (!data.clientMetrics) return {uniqueClients: null, requestsPerClient: null, consideredRequests: null, identifiedRequests: null, repeatClients: null, identityCoverage: null, missingIdentityRequests: null,
-    clientMetricsReason: 'Pendiente de datos reales de clientes identificados en la API.'};
-  const metrics = validateClientMetrics(data.clientMetrics, data.updatedAt);
-  const row = metrics.rows.find(r => r.month === month && r.periodEnd === end &&
-    r.distributor === (distributor || null) && r.branch === (branch || null));
-  if (!row) return {uniqueClients: null, requestsPerClient: null, consideredRequests: null, identifiedRequests: null, repeatClients: null, identityCoverage: null, missingIdentityRequests: null,
-    clientMetricsReason: 'Falta el conteo del historial para este periodo y estos filtros.'};
-  const identified = row.totalRequests - row.missingIdentityRequests;
-  return {uniqueClients: row.uniqueClients,
-    repeatClients: row.repeatClients ?? null,
-    requestsPerClient: row.uniqueClients > 0 ? identified / row.uniqueClients : null,
-    consideredRequests: row.totalRequests,
-    identifiedRequests: identified,
-    missingIdentityRequests: row.missingIdentityRequests,
-    identityCoverage: row.totalRequests > 0 ? identified / row.totalRequests * 100 : null,
-    contradictionRequests: row.contradictionRequests ?? null,
-    clientMetricsReason: row.totalRequests === 0 ? 'Sin solicitudes en este conjunto.' : ''};
+const empty = reason => ({uniqueClients:null,requestsPerClient:null,consideredRequests:null,identifiedRequests:null,repeatClients:null,identityCoverage:null,missingIdentityRequests:null,contradictionRequests:null,clientMetricsReason:reason});
+export function clientMetrics(data,{month,distributor='',branch=''},end){
+  if(!data.clientMetrics) return empty('Pendiente de datos reales de clientes identificados en la API.');
+  const metrics=validateClientMetrics(data.clientMetrics,data.updatedAt);
+  if(!metrics.coverage.some(c=>c.month===month && c.periodEnd===end)) return empty('Sin cobertura del historial para este periodo.');
+  let unique=0, identified=0, unknown=0, repeat=0, exact=true, repeatExact=true;
+  for(const c of metrics.cohorts.filter(c=>c.month===month && c.periodEnd===end)){
+    const matching=c.requestsByDimension.filter(d=>(!distributor||d.distributor===distributor)&&(!branch||d.branch===branch));
+    const requests=matching.reduce((n,d)=>n+d.requests,0);
+    if(!requests) continue;
+    if(c.kind!=='identified'){unknown+=requests;continue;}
+    identified+=requests;
+    if((!distributor&&!branch) || matching.length===c.requestsByDimension.length || c.clientCount===1) unique+=c.clientCount;
+    else exact=false;
+    if(c.clientCount===1){if(requests>1)repeat++;}else repeatExact=false;
+  }
+  const total=identified+unknown;
+  return {uniqueClients:exact?unique:null,requestsPerClient:exact&&unique>0?identified/unique:null,consideredRequests:total,identifiedRequests:identified,repeatClients:repeatExact?repeat:null,identityCoverage:total>0?identified/total*100:null,missingIdentityRequests:unknown,contradictionRequests:null,clientMetricsReason:!exact?'Clientes únicos no determinables exactamente con este filtro.':!repeatExact?'Clientes recurrentes no determinables exactamente en cohortes agrupadas.':'Solicitudes sin identidad incluyen casos ambiguos; los clientes se cuentan por mes.'};
 }
