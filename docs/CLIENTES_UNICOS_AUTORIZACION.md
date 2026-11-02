@@ -1,5 +1,9 @@
 # Clientes únicos: investigación y ampliación pendiente
 
+## Propuesta independiente preparada tras recibir el SQL original
+
+Se recibió y leyó `GT_solicitudes.sql` de Desktop/Guate; confirma la CTE de último flujo. No se modificó. La entrega completa para revisión está en `proposals/client-history/IMPLEMENTACION.md`, con el nuevo SQL, Python completo, Apps Script completo, borradores web y pruebas locales. No se ha instalado ni ejecutado contra servicios externos. La siguiente acción requiere autorización expresa.
+
 ## Evidencia comprobada
 
 1. En `a11d2db:scripts/refresh.py`, la consulta `REQUESTS_SQL` comienza con `clientes_unicos`, agrupa por `formularioCapturaJson ->> '$.docIdent'` y selecciona `MAX(og.id)`. El SELECT final parte de `clientes_unicos`. Por tanto, **esa consulta histórica retiene solo el último flujo por documento**, no todas las solicitudes de cada cliente. Las uniones posteriores también deben revisarse para evitar multiplicación por formularios/consultas de buró.
@@ -33,7 +37,7 @@ Los datos ficticios de tests sirven exclusivamente para verificar los casos mate
 
 ## Cambio externo propuesto, NO ejecutado
 
-El Apps Script y la hoja ya se inspeccionaron. El siguiente dato necesario es la consulta actual que genera `GT_solicitudes_<runId>.csv`, o una fuente existente con todas las solicitudes. Revisarla es una acción de solo lectura; no se modificará ni ejecutará Python. Antes de activar conteos hay que confirmar la cobertura del historial y explicar las filas repetidas por ID de solicitud.
+El Apps Script y la hoja ya se inspeccionaron. La consulta original ya fue recibida: selecciona MAX(og.id) por docIdent. Se preparó una consulta histórica independiente sin esa consolidación. Antes de activar conteos falta autorización para verificar el SQL propuesto contra MySQL real, revisar incidencias y comprobar cobertura; después se podrá autorizar su integración de prueba.
 
 Si la hoja actual ya contiene el historial completo con esos campos:
 
