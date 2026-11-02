@@ -1,4 +1,5 @@
 
+import {validateClientMetrics} from '../public/client-metrics.mjs';
 const fields = {
   requests: [
     'date', 'week', 'distributor', 'branch', 'user',
@@ -28,7 +29,7 @@ export function validatePublic(data) {
   const top = [
     'schemaVersion', 'source', 'updatedAt',
     'requests', 'dispersions', 'offers',
-    'historicalTotals', 'monthlyTargets', 'dailyTargets'
+    'historicalTotals', 'monthlyTargets', 'dailyTargets', 'clientMetrics'
   ];
 
   if (Object.keys(data).some(k => !top.includes(k))) {
@@ -139,6 +140,7 @@ export function validatePublic(data) {
     }
   }
 
+  if (data.clientMetrics !== undefined) validateClientMetrics(data.clientMetrics, data.updatedAt);
   return data;
 }
 

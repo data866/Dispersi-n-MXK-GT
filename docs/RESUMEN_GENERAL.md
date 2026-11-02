@@ -10,7 +10,7 @@ Quinta pestaña basada en la referencia entregada: seis tarjetas, dona y evoluci
 - Evolución: seis semanas calendario (lunes a domingo) hasta el corte del mes, con cantidades semanales, no acumulados históricos. Cada semana se intersecta con el mes y el corte. Se marca con asterisco la semana parcial. Fuera del mes se muestra —. La línea usa porcentaje semanal ponderado y eje derecho de 0 a 100%. Fechas de lunes evitan confundir semanas entre años.
 - Activaciones y monto: suma de `credits` y `amount` en `dispersions`, por fecha de activación, con idénticos filtros. El monto visible se redondea a quetzales, conservando los decimales en el cálculo.
 - No hay comparativos: la API no declara cobertura de semanas completas; filas ausentes no prueban que la extracción esté completa.
-- Solicitudes consideradas: suma de `total` del periodo filtrado. Clientes únicos y promedio: no disponibles, nunca estimados usando usuarios, nombres o grupos.
+- El bloque de clientes admite conteos agregados del historial mediante `clientMetrics`, con promedio de dos decimales y filtros exactos. Sin ese bloque, los conteos de la vista actual se identifican como registros, no como historial de solicitudes. Clientes únicos y promedio permanecen no disponibles hasta verificar y ampliar la fuente. Véase `CLIENTES_UNICOS_AUTORIZACION.md`.
 
 ## Fuente pendiente de autorización
 

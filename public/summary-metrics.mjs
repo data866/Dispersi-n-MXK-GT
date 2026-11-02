@@ -1,3 +1,4 @@
+import {clientMetrics} from './client-metrics.mjs';
 // Solo agregados existentes: nunca estima clientes a partir de nombres o grupos.
 const sum = (rows, field) => rows.reduce((n, row) => n + row[field], 0);
 const percent = (part, total) => total > 0 ? part / total * 100 : null;
@@ -59,8 +60,6 @@ export function summaryMetrics(data, {month, distributor = '', branch = ''}) {
     // La API no declara cobertura temporal; filas ausentes no certifican una
     // semana completa. No publicar comparativos hasta disponer de esa garantía.
     previousWeekComparison: null,
-    uniqueClients: null,
-    requestsPerClient: null,
-    consideredRequests: total
+    ...clientMetrics(data, {month, distributor, branch}, end)
   };
 }
