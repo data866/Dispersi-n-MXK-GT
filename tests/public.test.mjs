@@ -13,7 +13,7 @@ test('original CSS and four tabs; weighted historical counts; monthly projection
   const html=fs.readFileSync('public/index.html','utf8'),css=html.split('<style>')[1].split('</style>')[0].replace(/\r\n/g,'\n');assert.equal(createHash('sha256').update(css).digest('hex'),fs.readFileSync('original-style.sha256','utf8').trim());
   const dom=new JSDOM(html,{url:'http://localhost:3000',runScripts:'outside-only'}),w=dom.window;
   w.setInterval=()=>0;w.fetch=async()=>({ok:true,json:async()=>fixture()});w.eval(fs.readFileSync('public/dashboard.js','utf8'));await new Promise(r=>setTimeout(r,0));
-  assert.equal(w.document.querySelectorAll('#tabs button').length,4);assert.equal(w.document.querySelector('.card div').textContent,'60');
+  assert.equal(w.document.querySelectorAll('#tabs button').length,5);assert.equal(w.document.querySelector('.card div').textContent,'60');
   w.document.querySelector('[data-id="dispersals"]').click();assert.equal(w.document.querySelectorAll('.card').length,4);assert.equal(w.document.querySelectorAll('.card div')[1].textContent,'2');assert.equal(w.eval('monthly().projection'),100/29*31);assert.equal(w.document.querySelectorAll('tbody tr').length,31);assert.equal(w.document.querySelector('tbody tr:nth-child(10) td:last-child').textContent,'1.7%');
   w.document.getElementById('distributor').value='B';w.document.getElementById('distributor').onchange();assert.equal(w.eval('monthly().projection'),0);assert.equal(w.document.querySelectorAll('.card div')[1].textContent,'0');
   w.document.querySelector('[data-id="requests"]').click();assert.equal(w.document.querySelector('.card div').textContent,'60');assert.equal(w.requestRows().reduce((n,r)=>n+r.total,0),30);
