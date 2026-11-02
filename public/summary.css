@@ -4,6 +4,8 @@
 
 @media(min-width:1101px){.sheet:has(.summary-general){padding-top:12px}.sheet:has(.summary-general) .mast{height:75px}.sheet:has(.summary-general) .tabs{margin-bottom:12px}.sg-card h2{font-size:19px}.sg-card strong{font-size:44px}.sg-evolution{max-height:260px}.sg-distribution{min-height:285px}.sg-distribution ul{font-size:17px}.sg-panel>h2{font-size:23px}.sg-charts .sg-panel{min-height:345px}}
 
-/* Reserva dos líneas en todos los encabezados para alinear las cifras. */
-.sg-card h2{height:calc(2.4em + 20px);min-height:calc(2.4em + 20px)}
-
+/* Alturas uniformes y valores centrados, también en las filas de móvil. */
+.sg-cards{grid-auto-rows:1fr}
+.sg-card{display:flex;flex-direction:column;height:100%;min-width:0}
+.sg-card h2{height:calc(2.4em + 20px);min-height:calc(2.4em + 20px);flex:none}
+.sg-card strong{display:flex;flex:1;align-items:center;justify-content:center;line-height:1.15;padding:11.5px 4px}
