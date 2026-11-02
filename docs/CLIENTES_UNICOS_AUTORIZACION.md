@@ -7,7 +7,19 @@
 3. `apps-script/Public_API.gs` toma `raw.requests` de `construirDatosVercel_` y agrupa conteos por fecha/semana/distribuidor/sucursal/usuario/seguimiento. No entrega documentos ni identificadores de solicitud. `construirDatosVercel_` no está versionada en este repositorio. El script versionado no representa fielmente todos los campos y nombres de la respuesta desplegada.
 4. Se buscó el proyecto `Actualizacion_Dashboard` y archivos Apps Script en el Drive conectado, sin resultados. Se encontró y leyó `Fuentes Looker GT` (ID `1EkqoiZzkoclbFsmq87SoeI5V3T7nIPVGESRYHtfO-Ec`): contiene encabezados de solicitudes y dispersión, sin documentos ni identificador de solicitud. No se ha establecido que sea la hoja que utiliza el dashboard desplegado.
 
-**Conclusión:** no existe evidencia suficiente para reconstruir el historial de solicitudes ni clientes únicos desde el JSON actual. No se usará el conteo de registros consolidados como historial completo ni se inventará un promedio 1.00.
+## Inspección de la fuente actual, 2 de noviembre de 2026
+
+Después de recibir acceso, se leyó el proyecto Apps Script `1iFOxF55vC2xJdZxDRX3SDEfErb7o2W2xe1Vi24mXAI_qAI4bPCIg-DLV` sin editar ni ejecutar funciones.
+
+- `API_Vercel.gs`: `construirDatosVercel_` abre `BD_DASHBOARD_MAXIKASH`, ID `1uHHZgBT7oz68yyvXNghjNK-nd8pD2yW72wfCu8rL9FU`, y lee `GT_solicitudes`, `GT_ofertas` y `GT_ppto_activacion`. Mapea `solicitud` a `id` y `doc_ident` a `doc` internamente. No deduplica solicitudes.
+- `Public_API.gs` actual conserva los nombres reales y agrupa/suma una unidad por cada fila recibida; no devuelve documentos. Esta versión sí incluye campos de factor. La divergencia respecto al archivo histórico versionado quedó confirmada; no se reemplazó ese archivo.
+- `Código.gs` importa CSV y publica las hojas mediante manifiestos y hashes. El origen de solicitudes es `GT_solicitudes_<runId>.csv`; el script no contiene la consulta que generó los CSV. No se alteraron funciones, activadores ni horarios.
+- Se leyó en el navegador `GT_solicitudes!A1:Z1`; el último límite de hoja era `Z9790`. Para la comprobación se leyeron únicamente `A2:A9790` (solicitud) y `O2:O9790` (doc_ident), y se calcularon estadísticas en memoria sin mostrar ni guardar documentos.
+- Resultado: **9,789 filas, 9,597 IDs de solicitud distintos, 9,597 documentos distintos, cero IDs/documentos vacíos**. Hay **151 documentos con más de una fila**, máximo **8 filas por documento**, pero **ningún documento con más de un ID de solicitud distinto**. Ningún ID de solicitud corresponde a documentos distintos. Las **192 filas adicionales repiten el mismo par solicitud/documento**.
+
+**Conclusión actual:** la hoja disponible tiene una sola solicitud distinta por documento y filas repetidas de esa misma solicitud. Esto es compatible con la consulta histórica de último flujo, pero no prueba qué consulta ejecuta hoy el proceso externo. Las repeticiones no son evidencia de solicitudes adicionales y no se usarán para inflar el promedio. Se puede contar clientes del conjunto disponible, pero ese conteo no demuestra el historial completo solicitado ni permite recuperar sucursales/fechas de solicitudes anteriores. No se activará `basis: request-history` con este conjunto sin evidencia adicional de cobertura.
+
+Los totales existentes del dashboard se conservan: esta revisión no autoriza corregir la fuente ni modificar los cálculos de las cuatro pestañas.
 
 ## Preparación ejecutada solo en GitHub/Vercel Preview
 
@@ -21,7 +33,7 @@ Los datos ficticios de tests sirven exclusivamente para verificar los casos mate
 
 ## Cambio externo propuesto, NO ejecutado
 
-Primero se necesita el enlace del Apps Script desplegado y su hoja para leer `construirDatosVercel_` y la consulta que alimenta solicitudes. Antes de editar se debe verificar si cada fila es un evento de solicitud, su ID estable, su fecha original, su sucursal/distribuidor y `doc_ident` como texto, y si contiene todos los eventos históricos o solo la última solicitud por cliente.
+El Apps Script y la hoja ya se inspeccionaron. El siguiente dato necesario es la consulta actual que genera `GT_solicitudes_<runId>.csv`, o una fuente existente con todas las solicitudes. Revisarla es una acción de solo lectura; no se modificará ni ejecutará Python. Antes de activar conteos hay que confirmar la cobertura del historial y explicar las filas repetidas por ID de solicitud.
 
 Si la hoja actual ya contiene el historial completo con esos campos:
 
