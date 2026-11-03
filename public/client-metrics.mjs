@@ -19,7 +19,18 @@ export function validateClientMetrics(metrics, updatedAt) {
       if(!exactKeys(d,['distributor','branch','requests']) || !safe(d.distributor) || !safe(d.branch) || !int(d.requests) || !d.requests) throw Error('Dimensión de clientes inválida');
       const k=JSON.stringify([d.distributor,d.branch]); if(seen.has(k)) throw Error('Dimensión duplicada'); seen.add(k); count+=d.requests;
     }
-    if(c.kind==='identified' && count<c.clientCount) throw Error('Conteo identificado inconsistente');
+    if (c.kind === 'identified' && count < c.clientCount) {
+  console.error('MAXIKASH COHORTE INCONSISTENTE', {
+    month: c.month,
+    periodEnd: c.periodEnd,
+    clientCount: c.clientCount,
+    cohortCount: c.cohortCount,
+    requestsCount: count,
+    dimensionsCount: c.requestsByDimension.length
+  });
+
+  throw Error('Conteo identificado inconsistente');
+}
   }
   return metrics;
 }
