@@ -44,7 +44,25 @@ export function summaryMetrics(data, {month, distributor = '', branch = ''}) {
       total: applicable ? count : null,
       approvalRate: applicable ? percent(sum(weekRows, 'approved'), count) : null};
   });
+  // Evolución mensual del año seleccionado, con la misma fuente y filtros
+  // de la pestaña Solicitudes. El mes en curso se señala como parcial.
+  const year = month.slice(0, 4);
+  const months = Array.from({length: 12}, (_, i) => {
+    const key = year + '-' + String(i + 1).padStart(2, '0');
+    const future = key > cutoff.slice(0, 7);
+    const monthRows = future ? [] : data.requests.filter(r => selected(r) && r.date.startsWith(key) && r.date <= cutoff);
+    return {month: key, total: future ? null : sum(monthRows, 'total'),
+      partial: key === cutoff.slice(0, 7), future};
+  });
+  for (let i = 0; i < months.length; i++) {
+    const current = months[i], previous = months[i - 1];
+    current.delta = !previous || current.total == null || previous.total == null || current.partial
+      ? null : current.total - previous.total;
+    current.changePct = current.delta == null || previous.total === 0
+      ? null : current.delta / previous.total * 100;
+  }
   return {
+    months,
     period: {start, end, cutoff},
     total, approved, rejected, unfinished,
     approvalRate: percent(approved, total),
