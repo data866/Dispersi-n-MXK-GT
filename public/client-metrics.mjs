@@ -9,7 +9,7 @@ export function validateClientMetrics(metrics, updatedAt) {
   if (!exactKeys(metrics,['coverage','cohorts']) || !Array.isArray(metrics.coverage) || !Array.isArray(metrics.cohorts) || metrics.coverage.length > 1200 || metrics.cohorts.length > 100000 || typeof updatedAt !== 'string' || !date(updatedAt.slice(0,10))) throw Error('Conteos de clientes no verificables');
   const months=new Map();
   for(const c of metrics.coverage){
-    if(!exactKeys(c,['month','periodEnd','snapshotAt']) || !/^\d{4}-(0[1-9]|1[0-2])$/.test(c.month) || !date(c.periodEnd) || c.periodEnd !== (endOfMonth(c.month)<updatedAt.slice(0,10)?endOfMonth(c.month):updatedAt.slice(0,10)) || typeof c.snapshotAt !== 'string' || !Number.isFinite(Date.parse(c.snapshotAt)) || Date.parse(c.snapshotAt)>Date.parse(updatedAt) || months.has(c.month)) throw Error('Cobertura de clientes inválida');
+    if(!exactKeys(c,['month','periodEnd','snapshotAt']) || !/^\d{4}-(0[1-9]|1[0-2])$/.test(c.month) || !date(c.periodEnd) || (c.periodEnd < c.month+'-01' || c.periodEnd > endOfMonth(c.month) || c.periodEnd > updatedAt.slice(0,10) || c.periodEnd > c.snapshotAt.slice(0,10)) || typeof c.snapshotAt !== 'string' || !Number.isFinite(Date.parse(c.snapshotAt)) || Date.parse(c.snapshotAt)>Date.parse(updatedAt) || months.has(c.month)) throw Error('Cobertura de clientes inválida');
     months.set(c.month,c.periodEnd);
   }
   for(const c of metrics.cohorts){
@@ -38,9 +38,11 @@ const empty = reason => ({uniqueClients:null,requestsPerClient:null,consideredRe
 export function clientMetrics(data,{month,distributor='',branch=''},end){
   if(!data.clientMetrics) return empty('Pendiente de datos reales de clientes identificados en la API.');
   const metrics=validateClientMetrics(data.clientMetrics,data.updatedAt);
-  if(!metrics.coverage.some(c=>c.month===month && c.periodEnd===end)) return empty('Sin cobertura del historial para este periodo.');
+  const coverage=metrics.coverage.find(c=>c.month===month && c.periodEnd<=end);
+  if(!coverage) return empty('Sin cobertura del historial para este periodo.');
+  const cutoff=coverage.periodEnd;
   let unique=0, identified=0, unknown=0, repeat=0, exact=true, repeatExact=true;
-  for(const c of metrics.cohorts.filter(c=>c.month===month && c.periodEnd===end)){
+  for(const c of metrics.cohorts.filter(c=>c.month===month && c.periodEnd===cutoff)){
     const matching=c.requestsByDimension.filter(d=>(!distributor||d.distributor===distributor)&&(!branch||d.branch===branch));
     const requests=matching.reduce((n,d)=>n+d.requests,0);
     if(!requests) continue;
@@ -51,5 +53,5 @@ export function clientMetrics(data,{month,distributor='',branch=''},end){
     if(c.clientCount===1){if(requests>1)repeat++;}else repeatExact=false;
   }
   const total=identified+unknown;
-  return {uniqueClients:exact?unique:null,requestsPerClient:exact&&unique>0?identified/unique:null,consideredRequests:total,identifiedRequests:identified,repeatClients:repeatExact?repeat:null,identityCoverage:total>0?identified/total*100:null,missingIdentityRequests:unknown,contradictionRequests:null,clientMetricsReason:!exact?'Clientes únicos no determinables exactamente con este filtro.':!repeatExact?'Clientes recurrentes no determinables exactamente en cohortes agrupadas.':'Solicitudes sin identidad incluyen casos ambiguos; los clientes se cuentan por mes.'};
+  return {uniqueClients:exact?unique:null,requestsPerClient:exact&&unique>0?identified/unique:null,consideredRequests:total,identifiedRequests:identified,repeatClients:repeatExact?repeat:null,identityCoverage:total>0?identified/total*100:null,missingIdentityRequests:unknown,contradictionRequests:null,clientMetricsReason:(cutoff<end?'Datos de clientes al '+cutoff+'; aún no incluyen el resto del periodo. ':'')+(!exact?'Clientes únicos no determinables exactamente con este filtro.':!repeatExact?'Clientes recurrentes no determinables exactamente en cohortes agrupadas.':'Solicitudes sin identidad incluyen casos ambiguos; los clientes se cuentan por mes.')};
 }
