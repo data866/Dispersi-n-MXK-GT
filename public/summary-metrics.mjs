@@ -51,7 +51,7 @@ export function summaryMetrics(data, {month, distributor = '', branch = ''}) {
     const key = year + '-' + String(i + 1).padStart(2, '0');
     const future = key > cutoff.slice(0, 7);
     const monthRows = future ? [] : data.requests.filter(r => selected(r) && r.date.startsWith(key) && r.date <= cutoff);
-    return {month: key, total: future ? null : sum(monthRows, 'total'),
+    return {month: key, total: future ? null : sum(monthRows, 'total'), approved: future ? null : sum(monthRows, 'approved'),
       partial: key === cutoff.slice(0, 7), future};
   });
   for (let i = 0; i < months.length; i++) {
