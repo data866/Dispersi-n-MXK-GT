@@ -140,7 +140,18 @@ export function validatePublic(data) {
     }
   }
 
-  if (data.clientMetrics !== undefined) validateClientMetrics(data.clientMetrics, data.updatedAt);
+  // El bloque de clientes es opcional. Un corte de cobertura inválido no debe
+  // impedir mostrar las solicitudes, dispersiones y ofertas ya verificadas.
+  // Nunca se publica un bloque de clientes que no haya pasado la validación.
+  if (data.clientMetrics !== undefined) {
+    try {
+      validateClientMetrics(data.clientMetrics, data.updatedAt);
+    } catch (error) {
+      console.error('MAXIKASH clientMetrics omitido:', error.message);
+      const {clientMetrics: _invalidClientMetrics, ...safeData} = data;
+      return safeData;
+    }
+  }
   return data;
 }
 
