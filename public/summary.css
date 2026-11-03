@@ -9,3 +9,9 @@
 .sg-card{display:flex;flex-direction:column;height:100%;min-width:0}
 .sg-card h2{height:calc(2.4em + 20px);min-height:calc(2.4em + 20px);flex:none}
 .sg-card strong{display:flex;flex:1;align-items:center;justify-content:center;line-height:1.15;padding:11.5px 4px}
+
+/* Contenedores de los dashboards externos y navegación unificada */
+.embedded-dashboard{width:100%;min-height:75vh;margin:0 auto}
+.embedded-dashboard iframe{display:block;width:100%;height:calc(100vh - 210px);min-height:700px;border:0;border-radius:12px;background:white}
+.embedded-dashboard p{font-size:12px;text-align:center;margin:8px}
+@media(max-width:800px){.embedded-dashboard iframe{height:calc(100vh - 250px);min-height:650px}}
