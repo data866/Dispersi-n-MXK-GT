@@ -1,6 +1,6 @@
 import {OAuth2Client} from 'google-auth-library';
 import {getPolicy, permissions} from '../lib/policy.mjs';
-import {ORIGIN, getSession, challenge, sessionCookie, cookieValue, unseal, sameOrigin, newSession} from '../lib/session.mjs';
+import {ORIGIN, getSession, challenge, sessionCookie, cookieValue, unseal, sameOrigin, newSession, refreshSession} from '../lib/session.mjs';
 const googleClient = new OAuth2Client();
 const CHALLENGE_COOKIE = '__Host-mxkgt-login';
 export default async function handler(req, res) {
@@ -29,8 +29,19 @@ export default async function handler(req, res) {
     let body=req.body;
     if (typeof body === 'string') {if(body.length>20000)return send(413,{error:'Solicitud demasiado grande.'});body=JSON.parse(body);}
     if (body?.action === 'logout') {
+      const current=getSession(req);
+      if(body.sessionId && current && body.sessionId!==current.sessionId)return send(200,{ok:true,sessionChanged:true});
       res.setHeader('Set-Cookie',[sessionCookie(null,0),sessionCookie(null,0,CHALLENGE_COOKIE)]);
       return send(200,{ok:true});
+    }
+    if (body?.action === 'activity') {
+      const current=getSession(req);
+      if (!current) return send(401,{error:'La sesión venció por inactividad. Inicia sesión de nuevo.'});
+      if(body.sessionId && body.sessionId!==current.sessionId)return send(409,{error:'La sesión cambió. Recarga la página.'});
+      const renewed = refreshSession(req, body.idleForMs ?? 0);
+      if (!renewed) return send(400,{error:'Actividad no válida.'});
+      res.setHeader('Set-Cookie',sessionCookie(renewed.payload));
+      return send(200,{session:renewed.session});
     }
     if (body?.action !== 'login') return send(405,{error:'No se permiten cambios de usuarios o permisos en esta etapa.'});
     const pending = unseal(cookieValue(req,CHALLENGE_COOKIE));
@@ -46,4 +57,5 @@ export default async function handler(req, res) {
     return send(200,{ok:true});
   } catch {return send(503,{error:'Acceso pendiente de configurar.'});}
 }
+
 

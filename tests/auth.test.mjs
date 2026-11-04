@@ -19,7 +19,7 @@ test('preserves original module matrix and exclusive administrator',()=>{
 test('rejects modified, expired, wrong-audience and challenge cookies as sessions',()=>{
  const p=newSession(identity),token=seal(p);assert.equal(unseal(token).sub,identity.sub);assert.equal(unseal(token.slice(0,-2)+'XX'),null);assert.equal(unseal(seal({...p,exp:1})),null);assert.equal(unseal(seal({...p,aud:'https://other.test'})),null);assert.equal(getSession(req('GET',null,{cookie:'__Host-mxkgt='+seal(challenge())})),null);assert.equal(getSession(req('GET',null,{cookie:'__Host-mxkgt='+seal({...p,email:'outsider@example.test'})})),null);
 });
-test('cookie is host-only secure HttpOnly SameSite Lax',()=>{const cookie=sessionCookie(newSession(identity));for(const flag of ['Secure','HttpOnly','SameSite=Lax','Path=/','Max-Age=3600'])assert.ok(cookie.includes(flag));assert.ok(!cookie.includes('Domain='));});
+test('cookie is host-only secure HttpOnly SameSite Lax',()=>{const cookie=sessionCookie(newSession(identity));for(const flag of ['Secure','HttpOnly','SameSite=Lax','Path=/'])assert.ok(cookie.includes(flag));assert.ok(!cookie.includes('Domain='));assert.ok(!cookie.includes('Max-Age='));assert.ok(!cookie.includes('Expires='));});
 test('permissions endpoint denies anonymous and non-admin sessions',async()=>{
  for(const [email,status] of [[null,401],['gabriel.juarez@maxikash.mx',403],['data@maxikash.mx',200]]){const r=response();const request=req('GET',null,email?{cookie:'__Host-mxkgt='+seal(newSession({...identity,email}))}:{});request.url+='?view=permissions';await auth(request,r);assert.equal(r.statusCode,status);if(status===200){assert.equal(r.body.users.length,27);assert.equal(r.body.readOnly,true);}}
 });
@@ -34,3 +34,4 @@ test('data API rejects anonymous requests before reaching the Sheets source',asy
  const original=global.fetch;let called=false;global.fetch=async()=>{called=true;throw new Error('No network in test');};
  try{const r=response();await data({method:'GET',headers:{}},r);assert.equal(r.statusCode,401);assert.equal(called,false);}finally{global.fetch=original;}
 });
+
