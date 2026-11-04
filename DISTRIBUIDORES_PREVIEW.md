@@ -1,17 +1,13 @@
-# Distribuidores con la sesión del portal
+# Distribuidores con una sesión central — solo Preview
 
-Solo se integra el Preview `feat/sesion-central-guatemala` de Distribuidores desde `demo/acceso-sobre-dashboard-original` del portal.
+El portal `demo/acceso-sobre-dashboard-original` incluye el módulo original de Distribuidores como dependencia Git fijada al commit de `feat/sesion-central-guatemala`. No se consultan sus rutas Production ni se desactiva la protección de despliegues de Vercel. No se requiere compartir cookies, secretos o tokens de Google entre sitios.
 
-El iframe mantiene el HTML, CSS, gráficas y cálculos originales. Se sirve por `/modules/distribuidores/Distribuidores.html`. Las solicitudes de datos usan esa misma ruta del portal y su cookie HttpOnly. Cada solicitud vuelve a comprobar la sesión y el permiso de Distribuidores de la matriz privada.
+El iframe conserva el HTML, CSS, gráficos, cálculos y datos del módulo original. Se sirve por `/modules/distribuidores/Distribuidores.html`. Cada solicitud a sus APIs exige la cookie central HttpOnly y el permiso de Distribuidores de la matriz privada.
 
-El servidor del portal firma una autorización Ed25519 para una única ruta GET, con duración máxima de 30 segundos y sin exceder el vencimiento de la sesión. Solo el servidor de Distribuidores recibe esa autorización. El navegador no recibe tokens de Google, claves ni autorizaciones reutilizables del módulo.
+El servidor crea un contexto interno no serializable por HTTP (una propiedad Symbol) únicamente después de validar la sesión. Los handlers originales de Distribuidores reciben ese contexto y vuelven a aplicar su whitelist mediante `accessFor()` y sus límites de PII. El contexto solo se admite en la rama Preview exacta del portal. Cabeceras, cuerpo, parámetros o cookies proporcionados por el navegador no pueden crear ese contexto.
 
-Distribuidores verifica firma, emisor, audiencia, ruta, método, vencimiento y rama Preview, y después aplica `accessFor()` con sus permisos originales. No acepta tokens del portal como si fueran tokens de Google. La clave privada solo existe en el Preview del portal; la clave pública solo se configura en la nueva rama de Distribuidores.
+Solo se sirven dos archivos estáticos explícitos y seis APIs originales de consulta. No se exponen los módulos de datos privados ni operaciones de escritura. La administración se conserva en el portal, exclusiva de data@maxikash.mx y en modo consulta.
 
-El proxy admite una lista explícita de rutas de consulta; no permite archivos privados, redirecciones ni operaciones de escritura. La administración se conserva en el portal y permanece en modo consulta. No hay altas, bajas, cambios de permisos o pruebas de Blob. No se utilizan credenciales ni almacenamiento de Production.
+Cerrar sesión elimina la cookie; las siguientes solicitudes al módulo devuelven 401. Los datos ya entregados al navegador no se pueden retirar retroactivamente.
 
-Cerrar sesión elimina la cookie central. Las siguientes solicitudes al módulo devuelven 401. Los datos ya entregados al navegador no se pueden retirar retroactivamente.
-
-`tests/central-session-copy.mjs` es una copia exacta del verificador de la rama de Distribuidores para ejecutar las pruebas de integración entre repositorios sin exponer datos o usar cuentas reales.
-
-Cartera conserva su integración anterior. Esta etapa no la modifica.
+No se modifican las listas de usuarios, permisos, consultas ni almacenamiento de Production. Cartera conserva su integración anterior y requiere una etapa separada.
