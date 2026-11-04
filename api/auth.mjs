@@ -10,7 +10,7 @@ export default async function handler(req, res) {
   const send = (status,body) => {res.statusCode=status;return res.end(JSON.stringify(body));};
   try {
     const clientId = process.env.GOOGLE_CLIENT_ID;
-    if (!clientId || process.env.VERCEL_ENV === 'production') return send(503,{error:'Acceso Preview pendiente de configurar.'});
+    if (!clientId) return send(503,{error:'Acceso pendiente de configurar.'});
     if (req.method === 'GET') {
       const session = getSession(req);
       if (new URL(req.url,ORIGIN).searchParams.get('view') === 'permissions') {
@@ -44,5 +44,6 @@ export default async function handler(req, res) {
     if (!permissions(identity.email)) return send(403,{error:'Esta cuenta no tiene acceso autorizado a MAXIKASH Guatemala.'});
     res.setHeader('Set-Cookie',[sessionCookie(newSession(identity)),sessionCookie(null,0,CHALLENGE_COOKIE)]);
     return send(200,{ok:true});
-  } catch {return send(503,{error:'Acceso Preview pendiente de configurar.'});}
+  } catch {return send(503,{error:'Acceso pendiente de configurar.'});}
 }
+

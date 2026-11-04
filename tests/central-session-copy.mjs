@@ -1,6 +1,6 @@
 import {createPublicKey, verify, createHash} from 'node:crypto';
-export const PORTAL_ORIGIN='https://dispersi-n-mxk-gt-git-demo-acceso-sobre-dashbo-9f7f29-data-3272.vercel.app';
-export const AUDIENCE='maxikash:distribuidores:preview';
+export const PORTAL_ORIGIN=process.env.VERCEL_ENV==='production'?'https://dispersi-n-mxk-gt.vercel.app':'https://dispersi-n-mxk-gt-git-demo-acceso-sobre-dashbo-9f7f29-data-3272.vercel.app';
+export const AUDIENCE=process.env.VERCEL_ENV==='production'?'maxikash:distribuidores:production':'maxikash:distribuidores:preview';
 export const centralPreview=()=>process.env.VERCEL_ENV==='preview' && process.env.VERCEL_GIT_COMMIT_REF==='feat/sesion-central-guatemala';
 export function requestHash(req) {
  const url=new URL(req.url,'https://module.invalid');
@@ -8,7 +8,7 @@ export function requestHash(req) {
 }
 export function centralEmail(req) {
  try {
-  if (!centralPreview() || req.method !== 'GET') return null;
+  if (!(centralPreview() || (process.env.VERCEL_ENV==='production' && process.env.VERCEL_GIT_COMMIT_REF==='main')) || req.method !== 'GET') return null;
   const token=String(req.headers.authorization || '').replace(/^Bearer\s+/i,'');
   if (token.length>4096) return null;
   const [version,payload,signature,extra]=token.split('.');
@@ -20,3 +20,4 @@ export function centralEmail(req) {
   return p.email.toLowerCase();
  } catch { return null; }
 }
+

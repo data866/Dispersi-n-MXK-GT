@@ -18,7 +18,7 @@ export default async function handler(req,res){
  if(path==='api/access-admin' && !session.permissions.administrar)return fail(403,'Administración exclusiva de accesos.');
  let stage='configuration';
  try{
-  if(process.env.VERCEL_ENV!=='preview' || process.env.VERCEL_GIT_COMMIT_REF!=='demo/acceso-sobre-dashboard-original')return fail(503,'Integración disponible solo en el Preview autorizado.');
+  if(!(process.env.VERCEL_ENV==='production' && process.env.VERCEL_GIT_COMMIT_REF==='main') && !(process.env.VERCEL_ENV==='preview' && process.env.VERCEL_GIT_COMMIT_REF==='demo/acceso-sobre-dashboard-original'))return fail(503,'Despliegue no autorizado.');
   const target=new URL(process.env.MXK_DISTRIBUIDORES_URL || '');
   if(target.protocol!=='https:' || !target.hostname.endsWith('.vercel.app') || target.username || target.password || target.port || target.pathname!=='/' || target.search || target.hash)throw new Error('Destino pendiente');
   const upstream=new URL('/'+path,target);
@@ -46,3 +46,4 @@ export default async function handler(req,res){
   res.setHeader('Content-Encoding','gzip');return res.end(gzipSync(body));
  }catch(error){console.error('MXK gateway:',stage,error.name,error.message,error.cause?.code || error.cause?.message || '');return fail(503,'Integración de Distribuidores pendiente de configurar.');}
 }
+
