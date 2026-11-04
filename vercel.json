@@ -1,9 +1,45 @@
 {
   "cleanUrls": true,
-  "functions": {"api/data.mjs":{"maxDuration":60}},
-  "rewrites": [{"source":"/data.json","destination":"/api/data"}],
+  "functions": {
+    "api/data.mjs": {
+      "maxDuration": 60
+    },
+    "api/distribuidores.mjs": {
+      "maxDuration": 60
+    }
+  },
+  "rewrites": [
+    {
+      "source": "/modules/distribuidores/:path*",
+      "destination": "/api/distribuidores?path=:path*"
+    },
+    {
+      "source": "/data.json",
+      "destination": "/api/data"
+    }
+  ],
   "headers": [
-    {"source":"/(.*)","headers":[{"key":"X-Content-Type-Options","value":"nosniff"},{"key":"Referrer-Policy","value":"strict-origin-when-cross-origin"}]},
-    {"source":"/api/(.*)","headers":[{"key":"Cache-Control","value":"no-store"}]}
+    {
+      "source": "/(.*)",
+      "headers": [
+        {
+          "key": "X-Content-Type-Options",
+          "value": "nosniff"
+        },
+        {
+          "key": "Referrer-Policy",
+          "value": "strict-origin-when-cross-origin"
+        }
+      ]
+    },
+    {
+      "source": "/api/(.*)",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "no-store"
+        }
+      ]
+    }
   ]
 }
