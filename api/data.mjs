@@ -1,3 +1,4 @@
+import {getSession} from '../lib/session.mjs';
 
 import {validateClientMetrics} from '../public/client-metrics.mjs';
 const fields = {
@@ -166,6 +167,11 @@ export default async function handler(req, res) {
     }));
   }
 
+  if (!getSession(req)) {
+    res.statusCode = 401;
+    return res.end(JSON.stringify({error: 'Inicia sesión para consultar el dashboard.'}));
+  }
+
   try {
     const url = process.env.SHEETS_PUBLIC_URL;
 
@@ -198,3 +204,4 @@ export default async function handler(req, res) {
     }));
   }
 }
+
