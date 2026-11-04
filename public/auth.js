@@ -25,12 +25,14 @@ async function start(session) {
  const {summaryView}=await import('/summary-view.mjs');window.summaryView=summaryView;
  const script=document.createElement('script');script.src='/dashboard.js';document.body.append(script);
  const {watchSession}=await import('/session-activity.mjs');
+ const {closeWithPage}=await import('/fresh-entry.mjs');
  const activity=watchSession(session,{
   post,
   fetchSession:async()=>{const response=await fetch('/api/auth',{cache:'no-store',credentials:'same-origin'});if(!response.ok)throw new Error('No fue posible comprobar la sesión.');return (await response.json()).session;},
   onSessionChanged:()=>{main.hidden=true;main.inert=true;tools.remove();location.reload();},
   onExpire:async()=>{main.hidden=true;main.inert=true;main.querySelectorAll('iframe').forEach(frame=>frame.remove());tools.remove();try{await post({action:'logout',sessionId:session.sessionId});}catch{}location.reload();}
  });
+ closeWithPage({sessionId:session.sessionId,hide:()=>{main.hidden=true;main.inert=true;main.querySelectorAll('iframe').forEach(frame=>frame.remove());tools.remove();},stop:()=>activity.stop()});
  ui.getElementById('logout').onclick=()=>activity.logout();
 }
 async function login(config) {
@@ -40,12 +42,13 @@ async function login(config) {
  script.onerror=()=>showError(new Error('No fue posible conectar con Google.'));
  script.onload=()=>{
   google.accounts.id.initialize({client_id:config.clientId,nonce:config.nonce,auto_select:false,callback:async result=>{
-   try{showError(new Error('Validando tu cuenta en el servidor…'));await post({action:'login',credential:result.credential,nonce:config.nonce});location.reload();}catch(e){showError(e);}
+   try{showError(new Error('Validando tu cuenta en el servidor…'));await post({action:'login',credential:result.credential,nonce:config.nonce});const state=await readSession();if(!state.session)throw new Error('No fue posible establecer la sesión. Intenta de nuevo.');await start(state.session);}catch(e){showError(e);}
   }});
   google.accounts.id.renderButton(root.getElementById('google'),{theme:'outline',size:'large',text:'continue_with',width:Math.min(390,window.innerWidth-50)});
   showError(new Error('Usa tu cuenta autorizada de MAXIKASH.'));
  };document.head.append(script);
 }
-(async()=>{try{const r=await fetch('/api/auth',{cache:'no-store',credentials:'same-origin'});const state=await r.json();if(!r.ok)throw new Error(state.error);if(state.session)await start(state.session);else await login(state);}catch(e){await login(null);showError(e);}})();
+async function readSession(){const r=await fetch('/api/auth',{cache:'no-store',credentials:'same-origin'});const state=await r.json();if(!r.ok)throw new Error(state.error);return state;}
+(async()=>{try{const {prepareFreshEntry}=await import('/fresh-entry.mjs');const state=await prepareFreshEntry({post,readSession});await login(state);}catch(e){await login(null);showError(e);}})();
 })();
 
