@@ -30,6 +30,10 @@
     .filters #distributor,.filters #branch{min-width:190px}
     #apply{border:0;background:var(--blue);color:white;border-radius:12px;padding:12px 22px;font-weight:700;cursor:pointer}
     #apply:hover{background:var(--title)}
+    #refresh-data{border:1px solid var(--blue);background:#fff;color:var(--blue);border-radius:12px;padding:11px 16px;font-weight:700;cursor:pointer;min-height:43px}
+    #refresh-data:hover{background:#eef4ff}
+    #refresh-data:disabled{opacity:.55;cursor:wait}
+    #refresh-data:focus-visible{outline:3px solid var(--yellow)}
     #status{font-size:13px;color:#545859;align-self:center}
     /* Tabla de sucursales: recuadro con desplazamiento interno */
     .branch-panel{margin:16px 1% 30px;border:1px solid #e3e8f0;border-radius:16px;box-shadow:0 3px 12px #00358e18;overflow:hidden}
@@ -69,7 +73,7 @@
       .filters label{min-width:0;width:100%;font-size:12px}
       .filters label:first-child{grid-column:1 / -1}
       .filters input,.filters select{width:100%;min-width:0!important;max-width:100%;font-size:14px;padding:9px}
-      #apply{grid-column:1 / -1;width:100%;min-height:42px}
+      #apply,#refresh-data{grid-column:1 / -1;width:100%;min-height:42px}
       #status{grid-column:1 / -1;font-size:11px;line-height:1.4;overflow-wrap:anywhere}
       .cards,.cards.four{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));margin:10px 0 22px;gap:10px}
       .card{border-radius:12px}.card h2,.cards.four .card h2{font-size:12px;min-height:50px;padding:8px 5px}
@@ -122,6 +126,6 @@
 </head>
 <body><main class="sheet">
   <header class="mast"><div class="brand"><img src="/logo-maxikash.png" alt="Maxikash" class="brand-logo"></div><h1 class="title" id="heading">Solicitudes Únicas Totales</h1><div class="flag"><img src="/bandera-guatemala.jpg" alt="Bandera de Guatemala" class="flag-image"></div></header>
-  <nav class="tabs" id="tabs"></nav><div class="filters"><label>Mes <input id="month" type="month"></label><label>Distribuidor <select id="distributor"></select></label><label>Sucursal <select id="branch"></select></label><button id="apply">Aplicar</button><span id="status" role="status"></span></div><section id="view"></section>
+  <nav class="tabs" id="tabs"></nav><div class="filters"><label>Mes <input id="month" type="month"></label><label>Distribuidor <select id="distributor"></select></label><label>Sucursal <select id="branch"></select></label><button id="apply">Aplicar</button><button id="refresh-data" type="button" aria-label="Actualizar datos desde Google Sheets">↻ Actualizar datos</button><span id="status" role="status"></span></div><section id="view"></section>
 </main>
 <script src="/dashboard.js" defer></script><script type="module">import {summaryView} from "/summary-view.mjs"; window.summaryView=summaryView; window.dispatchEvent(new Event("summary-ready"));</script></body></html>
