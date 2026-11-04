@@ -34,7 +34,7 @@ function render(){document.getElementById('heading').classList.toggle('summary-t
 function options(id,values){const el=document.getElementById(id),v=el.value;el.replaceChildren(new Option('Todos',''),...values.map(x=>new Option(x,x)));el.value=values.includes(v)?v:'';}
 function refreshBranches(){options('branch',[...new Set([...data.requests,...data.offers].filter(r=>!document.getElementById('distributor').value||r.distributor===document.getElementById('distributor').value).map(r=>r.branch))].sort());}
 let loading=false;
-async function load(){if(loading)return;loading=true;try{const response=await fetch('/api/data',{cache:'no-store'});if(!response.ok)throw new Error();const next=await response.json();if(next.schemaVersion!==3)throw new Error();data=next;
+async function load(manual=false){if(loading)return;loading=true;const refreshButton=document.getElementById('refresh-data');if(refreshButton){refreshButton.disabled=true;refreshButton.textContent='↻ Actualizando…';}if(manual)document.getElementById('status').textContent='Consultando datos actualizados…';try{const response=await fetch('/api/data',{cache:'no-store'});if(!response.ok)throw new Error();const next=await response.json();if(next.schemaVersion!==3)throw new Error();data=next;
 // AJUSTE PROVISIONAL DE VISTA (no altera Sheets, MySQL ni /api/data).
 // Operación por verificar: 2026-11-03, Q 11,200, 1 crédito.
 // Se muestra solamente en vista general; nunca se atribuye a un distribuidor.
@@ -51,7 +51,8 @@ if(!alreadyReported){
     activations:data.historicalTotals.activations+1,
     sales:data.historicalTotals.sales+11200};
 }
-if(!document.getElementById('month').value)document.getElementById('month').value=data.updatedAt.slice(0,7);options('distributor',[...new Set([...data.requests,...data.offers].map(r=>r.distributor))].sort());refreshBranches();document.getElementById('status').textContent='Corte: '+data.updatedAt.replace('T',' ')+' · Revisión automática cada 5 min';render();}catch{document.getElementById('status').textContent='No fue posible actualizar desde Sheets.';if(!data)document.getElementById('view').innerHTML='<div class="empty">No fue posible cargar los datos.</div>';}finally{loading=false;}}
+if(!document.getElementById('month').value)document.getElementById('month').value=data.updatedAt.slice(0,7);options('distributor',[...new Set([...data.requests,...data.offers].map(r=>r.distributor))].sort());refreshBranches();document.getElementById('status').textContent='Corte: '+data.updatedAt.replace('T',' ')+' · '+(manual?'Actualización completada':'Revisión automática cada 5 min');render();}catch{document.getElementById('status').textContent='No fue posible actualizar desde Sheets.';if(!data)document.getElementById('view').innerHTML='<div class="empty">No fue posible cargar los datos.</div>';}finally{loading=false;if(refreshButton){refreshButton.disabled=false;refreshButton.textContent='↻ Actualizar datos';}}}
+document.getElementById('refresh-data').onclick=()=>load(true);
 document.getElementById('apply').onclick=()=>{if(data)render();};document.getElementById('month').onchange=()=>{if(data)render();};document.getElementById('distributor').onchange=()=>{if(data){refreshBranches();render();}};document.getElementById('branch').onchange=()=>{if(data)render();};
 load();setInterval(()=>{if(!document.hidden)load();},300000);document.addEventListener('visibilitychange',()=>{if(!document.hidden)load();});
 
