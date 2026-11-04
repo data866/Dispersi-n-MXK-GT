@@ -25,13 +25,42 @@ function isoWeek(d){let x=new Date(`${d}T12:00:00`);x.setDate(x.getDate()+4-(x.g
 function monthly(){const month=currentMonth(),today=data.updatedAt.slice(0,10),days=new Date(Date.UTC(+month.slice(0,4),+month.slice(5,7),0)).getUTCDate(),elapsed=month<today.slice(0,7)?days:month===today.slice(0,7)?+today.slice(8,10):0,ds=data.dispersions.filter(r=>r.date.startsWith(month)&&selected(r)),by=Object.create(null);for(const r of ds){const x=by[r.date]??={date:r.date,credits:0,amount:0,pagare:0,montoActivado:0,hasFactorData:false};x.credits+=r.credits||0;x.amount+=r.amount||0;if(r.hasFactorData===true){x.hasFactorData=true;x.pagare+=Number(r.pagare)||0;x.montoActivado+=Number(r.montoActivado)||0;}}return {month,days,rows:Object.values(by).sort((a,b)=>a.date.localeCompare(b.date)),target:month==='2026-11'&&ds.some(r=>r._provisional)?850000:data.monthlyTargets[month],projection:month==='2026-11'&&ds.some(r=>r._provisional)?11573:(elapsed?sum(ds.filter(r=>r.date<=today),'amount')/elapsed*days:null)};}
 // Referencia provisional de Looker para noviembre 2026; no sustituye la fuente de datos.
 const novemberDailyReference={
-  '2026-11-01':34916,'2026-11-02':37156,'2026-11-03':34404,
-  '2026-11-04':35950,'2026-11-05':30387,'2026-11-06':14046,'2026-11-07':36174
+  '2026-11-01':34915.76389710442,
+  '2026-11-02':37155.66811014461,
+  '2026-11-03':34404.133087712406,
+  '2026-11-04':35950.075857343996,
+  '2026-11-05':30387.33396861963,
+  '2026-11-06':14046.089024150848,
+  '2026-11-07':36174.39778889168,
+  '2026-11-08':34338.93607312466,
+  '2026-11-09':32541.045518306517,
+  '2026-11-10':32255.9467087533,
+  '2026-11-11':31767.521616417947,
+  '2026-11-12':33351.0355469984,
+  '2026-11-13':8329.747389194326,
+  '2026-11-14':30497.837383175145,
+  '2026-11-15':13868.178526716476,
+  '2026-11-16':28601.598789402593,
+  '2026-11-17':32255.9467087533,
+  '2026-11-18':31767.521616417947,
+  '2026-11-19':33351.0355469984,
+  '2026-11-20':13504.622292828848,
+  '2026-11-21':33207.38110807624,
+  '2026-11-22':31651.49303113466,
+  '2026-11-23':27478.884097518614,
+  '2026-11-24':27539.660975524148,
+  '2026-11-25':31767.521616417947,
+  '2026-11-26':33351.0355469984,
+  '2026-11-27':13504.622292828848,
+  '2026-11-28':33207.38110807624,
+  '2026-11-29':8329.747389194326,
+  '2026-11-30':30497.837383175145
 };
-function dailyTarget(date){return date in novemberDailyReference?novemberDailyReference[date]:data.dailyTargets[date];}
-function dailyFactor(row){if(row.date==='2026-11-03'&&row._provisional)return '2,48%';if(row.date.startsWith('2026-11')&&row.credits===0)return '0';return factor(row);}
+const threeDecimals=new Intl.NumberFormat('es-GT',{minimumFractionDigits:0,maximumFractionDigits:3});
+function dailyTarget(date){return Object.prototype.hasOwnProperty.call(novemberDailyReference,date)?novemberDailyReference[date]:data.dailyTargets[date];}
+function dailyFactor(row){if(row.date==='2026-11-03'&&row._provisional)return threeDecimals.format(2.479285714285714)+'%';if(row.date.startsWith('2026-11')&&row.credits===0)return '0';return factor(row);}
 function factor(x){return x.hasFactorData&&x.montoActivado>0?(Math.floor((x.pagare/x.montoActivado+Number.EPSILON)*10)/10).toFixed(1)+'%':'—';}
-function dispersals(){const m=monthly(),rows=Array.from({length:m.days},(_,i)=>{const date=m.month+'-'+String(i+1).padStart(2,'0');return {...(m.rows.find(r=>r.date===date)||{date,credits:0,amount:0,hasFactorData:false}),target:dailyTarget(date)};});const cols=[{l:'dia_mes',v:x=>Number(x.date.slice(-2)),e:x=>Number(x.date.slice(-2))},{l:'# Total creditos',r:1,v:x=>nf.format(x.credits),e:x=>x.credits},{l:'Q Total Dispersado',r:1,v:x=>money(x.amount),e:x=>x.amount},{l:'Q Meta',r:1,v:x=>x.target==null?'—':money(x.target),e:x=>x.target??''},{l:'% vs Meta',r:1,v:x=>x.target?(x.amount?((x.amount*100/x.target).toFixed(2).replace('.',',')+'%'):'0'):'—'},{l:'Factor',r:1,v:dailyFactor}];return `<section class="cards four">${card('Venta Total',money(sum(m.rows,'amount')))}${card('Total Motos',nf.format(sum(m.rows,'credits')))}${card('Meta general',m.target==null?'—':money(m.target))}${card('Proyección',m.projection==null?'—':money(m.projection))}</section>${rawTable(rows,cols,'wide','Dispersión y Activación por día')}${m.month==='2026-11'&&data.dispersions.some(r=>r._provisional)?'<p style="font-size:13px;color:#666">* Incluye 1 dispersión provisional del 3 de noviembre por Q11,200, meta de Q850,000 y proyección de referencia Q11,573, pendientes de validación. No se suma si la fuente ya reporta una dispersión ese día.</p>':''}`;}
+function dispersals(){const m=monthly(),rows=Array.from({length:m.days},(_,i)=>{const date=m.month+'-'+String(i+1).padStart(2,'0');return {...(m.rows.find(r=>r.date===date)||{date,credits:0,amount:0,hasFactorData:false}),target:dailyTarget(date)};});const cols=[{l:'dia_mes',v:x=>Number(x.date.slice(-2)),e:x=>Number(x.date.slice(-2))},{l:'# Total creditos',r:1,v:x=>nf.format(x.credits),e:x=>x.credits},{l:'Q Total Dispersado',r:1,v:x=>threeDecimals.format(x.amount),e:x=>x.amount},{l:'Q Meta',r:1,v:x=>x.target==null?'—':threeDecimals.format(x.target),e:x=>x.target??''},{l:'% vs Meta',r:1,v:x=>x.target?(x.amount?(threeDecimals.format(x.amount*100/x.target)+'%'):'0'):'—'},{l:'Factor',r:1,v:dailyFactor}];return `<section class="cards four">${card('Venta Total',money(sum(m.rows,'amount')))}${card('Total Motos',nf.format(sum(m.rows,'credits')))}${card('Meta general',m.target==null?'—':money(m.target))}${card('Proyección',m.projection==null?'—':money(m.projection))}</section>${rawTable(rows,cols,'wide','Dispersión y Activación por día')}${m.month==='2026-11'&&data.dispersions.some(r=>r._provisional)?'<p style="font-size:13px;color:#666">* Incluye 1 dispersión provisional del 3 de noviembre por Q11,200, meta de Q850,000 y proyección de referencia Q11,573, pendientes de validación. No se suma si la fuente ya reporta una dispersión ese día.</p>':''}`;}
 function inventory(){const r=requestRows(),weeks=Object.create(null);for(const x of r){const w=x.week||isoWeek(x.date),z=weeks[w]??={week:w,total:0,follow:Object.create(null)};z.total+=x.total;const f=x.followup||'Sin seguimiento';z.follow[f]=(z.follow[f]||0)+x.total;}const rows=Object.values(weeks).sort((a,b)=>String(b.week).localeCompare(String(a.week))),headers=['3 No confirma NIP','4 Sin Respuesta Buro','5 Rechazado','6 No selecciona Oferta','7 Completo'];const total={week:'Total',total:sum(r,'total'),follow:Object.fromEntries(headers.map(h=>[h,rows.reduce((n,x)=>n+(x.follow[h]||0),0)]))};const cols=[{l:'num_semana',v:x=>x.week==='Total'?'Total':String(x.week).slice(-2)},...headers.map(h=>({l:h,r:1,v:x=>x.follow[h]||'—',e:x=>x.follow[h]||0})),{l:'Total',r:1,v:x=>nf.format(x.total),e:x=>x.total}];return `<h1 class="report-title">Inventario Solicitudes</h1>${rawTable([...rows,total],cols,'wide','Inventario por semana')}`;}
 function detail(){const r=requestRows(),o=data.offers.filter(x=>x.month===currentMonth()&&selected(x));return `<section class="detail">${rawTable(r,[{l:'fecha_solicitud',v:x=>x.date},{l:'sucursal',v:x=>x.branch},{l:'distribuidor',v:x=>x.distributor},{l:'seguimiento',v:x=>x.followup},{l:'usuario',v:x=>x.user},{l:'Total solicitudes',r:1,v:x=>nf.format(x.total),e:x=>x.total},{l:'Aprobadas',r:1,v:x=>nf.format(x.approved),e:x=>x.approved},{l:'Rechazadas',r:1,v:x=>nf.format(x.rejected),e:x=>x.rejected},{l:'Sin terminar',r:1,v:x=>nf.format(x.unfinished),e:x=>x.unfinished}],'detail','Detalle de solicitudes',true)}${rawTable(o,[{l:'Mes',v:x=>x.month},{l:'etapa',v:x=>x.stage},{l:'modelo_moto',v:x=>x.model},{l:'marca_moto',v:x=>x.brand},{l:'distribuidor',v:x=>x.distributor},{l:'sucursal',v:x=>x.branch},{l:'Total ofertas',r:1,v:x=>nf.format(x.total),e:x=>x.total},{l:'Activadas',r:1,v:x=>nf.format(x.activated),e:x=>x.activated},{l:'monto_financiar activado',r:1,v:x=>money(x.amount),e:x=>x.amount}],'detail','Detalle de ofertas',true)}</section>`;}
 function summary(){return window.summaryView?window.summaryView(data,{month:currentMonth(),distributor:document.getElementById('distributor').value,branch:document.getElementById('branch').value}):'<div class="empty">Cargando resumen…</div>'; }
