@@ -24,9 +24,17 @@ export default async function handler(req,res){
   const upstream=new URL('/'+path,target);
   for(const [key,value] of incoming.searchParams){if(['year','pks','disp'].includes(key))upstream.searchParams.append(key,value);}
   stage='signature';
-  const assertion=moduleAssertion(session,upstream.pathname+upstream.search);
   stage='upstream';
-  const response=await fetch(upstream,{method:'GET',redirect:'error',headers:{Authorization:'Bearer '+assertion},signal:AbortSignal.timeout(45000),cache:'no-store'});
+  const read=destination=>fetch(destination,{method:'GET',redirect:'manual',headers:{Authorization:'Bearer '+moduleAssertion(session,destination.pathname+destination.search)},signal:AbortSignal.timeout(45000),cache:'no-store'});
+  let response=await read(upstream);
+  if([301,302,303,307,308].includes(response.status)){
+   const location=response.headers.get('location');
+   if(!location)throw new Error('Redirección sin destino');
+   const next=new URL(location,upstream);
+   const canonical=p=>p.replace(/\.html$/,'').replace(/\/$/,'');
+   if(next.origin!==target.origin || canonical(next.pathname)!==canonical(upstream.pathname) || next.search!==upstream.search)throw new Error('Redirección no autorizada: '+next.origin+next.pathname);
+   response=await read(next);
+  }
   if(!response.ok)return fail(response.status===401||response.status===403?response.status:502,'No fue posible validar o cargar el módulo de Distribuidores.');
   const contentType=response.headers.get('content-type') || 'application/octet-stream';
   if(path.endsWith('.html') && !contentType.includes('text/html'))throw new Error('Respuesta inesperada');
@@ -36,5 +44,5 @@ export default async function handler(req,res){
   stage='response';
   const body=Buffer.from(await response.arrayBuffer());
   res.setHeader('Content-Encoding','gzip');return res.end(gzipSync(body));
- }catch(error){console.error('MXK gateway:',stage,error.name,error.message,error.cause?.code || '');return fail(503,'Integración de Distribuidores pendiente de configurar.');}
+ }catch(error){console.error('MXK gateway:',stage,error.name,error.message,error.cause?.code || error.cause?.message || '');return fail(503,'Integración de Distribuidores pendiente de configurar.');}
 }
