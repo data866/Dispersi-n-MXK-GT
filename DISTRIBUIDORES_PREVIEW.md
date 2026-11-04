@@ -16,6 +16,10 @@ Cerrar sesión elimina la cookie central. Las siguientes solicitudes al módulo 
 
 Cartera conserva su integración anterior. Esta etapa no la modifica.
 
-## Estado de verificación
+## Configuración de Vercel validada
 
-El Preview del portal compila y conserva el dashboard original. La comunicación con el Preview de Distribuidores está bloqueada por Vercel Authentication. La alternativa de incluir el módulo original durante la compilación requiere acceso de lectura a su repositorio privado. No se copian archivos privados al repositorio público del portal y no se desactiva Deployment Protection. La conexión completa permanece pendiente de ese permiso.
+Se agregó una excepción de Deployment Protection únicamente para `dashboard-distribuidores-gt-git-feat-sesion-ce-cf9ac8-data-3272.vercel.app`, dominio Preview de `feat/sesion-central-guatemala`. Se conserva Standard Protection en el proyecto; no se incluyen dominios Production ni otras ramas en la excepción.
+
+La excepción solo elimina la segunda barrera de Vercel. Las APIs del módulo siguen requiriendo la autorización firmada del portal y aplican su whitelist original de 13 administradores. Las llamadas directas sin autorización a datos y PII siguen devolviendo `no autenticado`.
+
+La navegación desde el portal con la sesión real de data@maxikash.mx carga el dashboard original, sus cifras, filtros y gráficas sin botón Google en el módulo. No fue necesario crear una credencial GitHub, copiar archivos del repositorio privado ni contratar servicios.
