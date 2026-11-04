@@ -1,0 +1,2 @@
+# Solo parser para pruebas locales. El exportador no añade dependencias operativas.
+sqlglot==30.27.0

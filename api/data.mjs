@@ -1,4 +1,6 @@
+import {getSession} from '../lib/session.mjs';
 
+import {validateClientMetrics} from '../public/client-metrics.mjs';
 const fields = {
   requests: [
     'date', 'week', 'distributor', 'branch', 'user',
@@ -28,7 +30,7 @@ export function validatePublic(data) {
   const top = [
     'schemaVersion', 'source', 'updatedAt',
     'requests', 'dispersions', 'offers',
-    'historicalTotals', 'monthlyTargets', 'dailyTargets'
+    'historicalTotals', 'monthlyTargets', 'dailyTargets', 'clientMetrics'
   ];
 
   if (Object.keys(data).some(k => !top.includes(k))) {
@@ -139,6 +141,18 @@ export function validatePublic(data) {
     }
   }
 
+  // El bloque de clientes es opcional. Un corte de cobertura inválido no debe
+  // impedir mostrar las solicitudes, dispersiones y ofertas ya verificadas.
+  // Nunca se publica un bloque de clientes que no haya pasado la validación.
+  if (data.clientMetrics !== undefined) {
+    try {
+      validateClientMetrics(data.clientMetrics, data.updatedAt);
+    } catch (error) {
+      console.error('MAXIKASH clientMetrics omitido:', error.message);
+      const {clientMetrics: _invalidClientMetrics, ...safeData} = data;
+      return safeData;
+    }
+  }
   return data;
 }
 
@@ -151,6 +165,11 @@ export default async function handler(req, res) {
     return res.end(JSON.stringify({
       error: 'Método no permitido'
     }));
+  }
+
+  if (!getSession(req)) {
+    res.statusCode = 401;
+    return res.end(JSON.stringify({error: 'Inicia sesión para consultar el dashboard.'}));
   }
 
   try {
@@ -185,3 +204,4 @@ export default async function handler(req, res) {
     }));
   }
 }
+
