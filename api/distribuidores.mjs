@@ -10,7 +10,10 @@ export default async function handler(req,res){
  if(!session)return fail(401,'Sesión central requerida.');
  if(!session.permissions.distribuidores)return fail(403,'No tienes acceso a Distribuidores.');
  const incoming=new URL(req.url,ORIGIN);
- const path=String(req.query?.path ?? incoming.searchParams.get('path') ?? '').replace(/^\/+/, '');
+ const prefix='/modules/distribuidores/';
+ const value=incoming.pathname.startsWith(prefix) ? decodeURIComponent(incoming.pathname.slice(prefix.length)) : req.query?.path ?? incoming.searchParams.get('path') ?? '';
+ const rawPath=(Array.isArray(value) ? value.join('/') : String(value)).replace(/^\/+/, '');
+ const path=rawPath==='Distribuidores' ? 'Distribuidores.html' : rawPath;
  if(!ALLOWED.has(path))return fail(404,'Ruta no disponible.');
  if(path==='api/access-admin' && !session.permissions.administrar)return fail(403,'Administración exclusiva de accesos.');
  try{

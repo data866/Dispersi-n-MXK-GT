@@ -42,3 +42,11 @@ test('server gateway hides assertions from the browser and drops user supplied h
 test('logout removes gateway access immediately because each request requires the central cookie',async()=>{
  portalEnv();const res=response();await proxy({method:'GET',url:'/api/distribuidores?path=api/distribuidores-data',query:{path:'api/distribuidores-data'},headers:{}},res);assert.equal(res.statusCode,401);
 });
+test('Vercel original URLs, clean HTML URLs and array rewrite parameters resolve only allowed routes',async()=>{
+ portalEnv();process.env.MXK_DISTRIBUIDORES_URL='https://isolated-module.example.vercel.app';
+ const cookie='__Host-mxkgt='+seal(newSession({email:session.email,sub:session.sub,exp:session.expiresAt}));
+ const original=global.fetch;let target;
+ global.fetch=async url=>{target=url.pathname;return new Response('fictional',{headers:{'Content-Type':target.endsWith('.html')?'text/html':'application/json'}});};
+ try{for(const [url,query,expected] of [['/modules/distribuidores/Distribuidores.html',{},'/Distribuidores.html'],['/modules/distribuidores/Distribuidores',{},'/Distribuidores.html'],['/modules/distribuidores/api/distribuidores-data',{},path],['/api/distribuidores',{path:['api','distribuidores-data']},path]]){const res=response();await proxy({method:'GET',url,query,headers:{cookie}},res);assert.equal(res.statusCode,200);assert.equal(target,expected);}}
+ finally{global.fetch=original;}
+});
