@@ -1,16 +1,7 @@
 import {gzipSync} from 'node:zlib';
-import {readFile} from 'node:fs/promises';
-import {createRequire} from 'node:module';
 import {getSession,ORIGIN} from '../lib/session.mjs';
-import data from 'mxk-distribuidores/api/distribuidores-data.js';
-import data2025 from 'mxk-distribuidores/api/distribuidores-data2025.js';
-import vendedores from 'mxk-distribuidores/api/distribuidores-vend.js';
-import vendedores2025 from 'mxk-distribuidores/api/distribuidores-vend2025.js';
-import tuberia from 'mxk-distribuidores/api/distribuidores-tuberia.js';
-import pii from 'mxk-distribuidores/api/distribuidores-pii.js';
-const require=createRequire(import.meta.url);
-const HANDLERS={'api/distribuidores-data':data,'api/distribuidores-data2025':data2025,'api/distribuidores-vend':vendedores,'api/distribuidores-vend2025':vendedores2025,'api/distribuidores-tuberia':tuberia,'api/distribuidores-pii':pii};
-const ASSETS={'Distribuidores.html':()=>readFile(require.resolve('mxk-distribuidores/Distribuidores.html')),'gt-departamentos.json':()=>readFile(require.resolve('mxk-distribuidores/gt-departamentos.json'))};
+import {moduleAssertion} from '../lib/module-assertion.mjs';
+const ALLOWED=new Set(['Distribuidores.html','gt-departamentos.json','api/distribuidores-data','api/distribuidores-data2025','api/distribuidores-vend','api/distribuidores-vend2025','api/distribuidores-tuberia','api/distribuidores-pii','api/access-admin']);
 export default async function handler(req,res){
  res.setHeader('Cache-Control','no-store');res.setHeader('X-Content-Type-Options','nosniff');
  const fail=(status,error)=>{res.statusCode=status;res.setHeader('Content-Type','application/json; charset=utf-8');return res.end(JSON.stringify({error}));};
@@ -18,22 +9,40 @@ export default async function handler(req,res){
  const session=getSession(req);
  if(!session)return fail(401,'Sesión central requerida.');
  if(!session.permissions.distribuidores)return fail(403,'No tienes acceso a Distribuidores.');
- const incoming=new URL(req.url,ORIGIN),prefix='/modules/distribuidores/';
- const value=incoming.pathname.startsWith(prefix)?decodeURIComponent(incoming.pathname.slice(prefix.length)):req.query?.path??incoming.searchParams.get('path')??'';
- const raw=(Array.isArray(value)?value.join('/'):String(value)).replace(/^\/+/, '');
- const path=raw==='Distribuidores'?'Distribuidores.html':raw;
- if(!Object.hasOwn(ASSETS,path)&&!Object.hasOwn(HANDLERS,path))return fail(404,'Ruta no disponible.');
- if(process.env.VERCEL_ENV!=='preview'||process.env.VERCEL_GIT_COMMIT_REF!=='demo/acceso-sobre-dashboard-original')return fail(503,'Integración disponible solo en el Preview autorizado.');
+ const incoming=new URL(req.url,ORIGIN);
+ const prefix='/modules/distribuidores/';
+ const value=incoming.pathname.startsWith(prefix) ? decodeURIComponent(incoming.pathname.slice(prefix.length)) : req.query?.path ?? incoming.searchParams.get('path') ?? '';
+ const rawPath=(Array.isArray(value) ? value.join('/') : String(value)).replace(/^\/+/, '');
+ const path=rawPath==='Distribuidores' ? 'Distribuidores.html' : rawPath;
+ if(!ALLOWED.has(path))return fail(404,'Ruta no disponible.');
+ if(path==='api/access-admin' && !session.permissions.administrar)return fail(403,'Administración exclusiva de accesos.');
+ let stage='configuration';
  try{
-  if(Object.hasOwn(ASSETS,path)){
-   const bytes=await ASSETS[path]();res.statusCode=200;
-   res.setHeader('Content-Type',path.endsWith('.html')?'text/html; charset=utf-8':'application/json; charset=utf-8');
-   res.setHeader('Content-Security-Policy',"frame-ancestors 'self'");
-   res.setHeader('Content-Encoding','gzip');return res.end(gzipSync(bytes));
+  if(process.env.VERCEL_ENV!=='preview' || process.env.VERCEL_GIT_COMMIT_REF!=='demo/acceso-sobre-dashboard-original')return fail(503,'Integración disponible solo en el Preview autorizado.');
+  const target=new URL(process.env.MXK_DISTRIBUIDORES_URL || '');
+  if(target.protocol!=='https:' || !target.hostname.endsWith('.vercel.app') || target.username || target.password || target.port || target.pathname!=='/' || target.search || target.hash)throw new Error('Destino pendiente');
+  const upstream=new URL('/'+path,target);
+  for(const [key,value] of incoming.searchParams){if(['year','pks','disp'].includes(key))upstream.searchParams.append(key,value);}
+  stage='signature';
+  stage='upstream';
+  const read=destination=>fetch(destination,{method:'GET',redirect:'manual',headers:{Authorization:'Bearer '+moduleAssertion(session,destination.pathname+destination.search)},signal:AbortSignal.timeout(45000),cache:'no-store'});
+  let response=await read(upstream);
+  if([301,302,303,307,308].includes(response.status)){
+   const location=response.headers.get('location');
+   if(!location)throw new Error('Redirección sin destino');
+   const next=new URL(location,upstream);
+   const canonical=p=>p.replace(/\.html$/,'').replace(/\/$/,'');
+   if(next.origin!==target.origin || canonical(next.pathname)!==canonical(upstream.pathname) || next.search!==upstream.search)throw new Error('Redirección no autorizada: '+next.origin+next.pathname);
+   response=await read(next);
   }
-  const query={};for(const [key,value] of incoming.searchParams){if(['year','pks','disp'].includes(key))query[key]=value;}
-  const moduleRequest={method:'GET',url:'/'+path,headers:{},query,[Symbol.for('maxikash.portal.verified-session')]:{email:session.email,sub:session.sub}};
-  // Los handlers originales vuelven a aplicar accessFor() y los límites de PII.
-  return await HANDLERS[path](moduleRequest,res);
- }catch(error){console.error('MXK module:',error.name,error.message);return fail(503,'No fue posible cargar Distribuidores.');}
+  if(!response.ok)return fail(response.status===401||response.status===403?response.status:502,'No fue posible validar o cargar el módulo de Distribuidores.');
+  const contentType=response.headers.get('content-type') || 'application/octet-stream';
+  if(path.endsWith('.html') && !contentType.includes('text/html'))throw new Error('Respuesta inesperada');
+  res.statusCode=200;res.setHeader('Content-Type',contentType);
+  res.setHeader('Content-Security-Policy',"frame-ancestors 'self'");
+  for(const header of ['X-Rol','X-Can-Manage-Access']){const value=response.headers.get(header);if(value)res.setHeader(header,value);}
+  stage='response';
+  const body=Buffer.from(await response.arrayBuffer());
+  res.setHeader('Content-Encoding','gzip');return res.end(gzipSync(body));
+ }catch(error){console.error('MXK gateway:',stage,error.name,error.message,error.cause?.code || error.cause?.message || '');return fail(503,'Integración de Distribuidores pendiente de configurar.');}
 }

@@ -5,8 +5,7 @@
       "maxDuration": 60
     },
     "api/distribuidores.mjs": {
-      "maxDuration": 60,
-      "includeFiles": "node_modules/mxk-distribuidores/{Distribuidores.html,gt-departamentos.json}"
+      "maxDuration": 60
     }
   },
   "rewrites": [
