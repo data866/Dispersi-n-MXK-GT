@@ -1,6 +1,6 @@
 import {createPrivateKey,sign,createHash} from 'node:crypto';
 import {getSession,ORIGIN} from '../lib/session.mjs';
-const ROUTES={'':'/api/dashboard','api/cartera-gt-live':'/api/cartera-gt-live','api/cobranza-gt-live':'/api/cobranza-gt-live','api/cartera-gt-descarga':'/api/cartera-gt-descarga','api/diagnostico-mysql-gt':'/api/diagnostico-mysql-gt'};
+const ROUTES={'':'/api/dashboard','dashboard':'/api/dashboard','api/cartera-gt-live':'/api/cartera-gt-live','api/cobranza-gt-live':'/api/cobranza-gt-live','api/cartera-gt-descarga':'/api/cartera-gt-descarga','api/diagnostico-mysql-gt':'/api/diagnostico-mysql-gt'};
 export default async function handler(req,res){
  res.setHeader('Cache-Control','no-store');res.setHeader('X-Content-Type-Options','nosniff');
  const fail=(status,error)=>{res.statusCode=status;res.setHeader('Content-Type','application/json');return res.end(JSON.stringify({error}));};
