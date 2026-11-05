@@ -28,3 +28,12 @@ Seis pruebas locales, sin conexiones ni datos reales: rechazo del administrador 
 4. Después de resolver la comunicación: ejecutar el diagnóstico firmado con la sesión administrativa real para `SELECT 1` y hasta 10 registros sin campos personales; después verificar el dashboard y descargas con una cuenta de consulta ya autorizada, sin suplantaciones.
 
 No se declara conexión MySQL exitosa: el bloqueo ocurre antes de llegar a la base y no permite concluir nada sobre contraseña, privilegios SQL o saturación. Las consultas originales mantienen cierre de conexión en `finally`. No se declara funcionamiento de BigQuery en Vercel sin credencial ni consulta real.
+
+## Comprobaciones posteriores al despliegue
+
+- Commit de código `0dbb023`: Vercel completó el despliegue Preview `7EZniWqkyByZs1wFBoSFsxGguenZ`. En Chrome se vio el mensaje de rechazo claro dentro de la pestaña original, sin un segundo botón Google. No se concede consulta al administrador.
+- Se ejecutó una consulta real de solo lectura en BigQuery con la identidad Google del navegador: recuento de una subconsulta limitada a diez filas de `mk-ddo-analitica.ds_raw_croop_GTmanual.raw_cartera`, sin seleccionar campos personales. La ejecución devolvió **Access Denied** y señaló `bigquery.tables.getData`. No devolvió registros. La identidad del navegador puede abrir BigQuery, pero no pudo consultar esta tabla; esto tampoco sustituye la credencial de la aplicación Vercel.
+- Se cerró la sesión real del portal con el botón Salir. Volvió la pantalla azul y blanca y las rutas protegidas del diagnóstico, descarga de Cartera y datos de Distribuidores devolvieron `Sesión central requerida`.
+- Acceso de una cuenta de consulta autorizada y comparación completa del dashboard/descargas: pendiente de inicio real de esa cuenta y de resolver las dependencias de conexión; no se usaron identidades falsas para acceder a servicios reales.
+
+El selector real de Google quedó abierto para una cuenta de consulta ya autorizada. La selección automatizada no completó el acceso; se requiere la selección manual, sin cambiar permisos.
