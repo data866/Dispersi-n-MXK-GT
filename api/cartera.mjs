@@ -30,6 +30,8 @@ export default async function handler(req,res){
   if(target.protocol!=='https:'||target.username||target.password||target.port||target.pathname!=='/'||target.origin!==CARTERA_PREVIEW_ORIGIN||target.search||target.hash)return fail(503,'Destino Preview pendiente.');
   target.pathname=ROUTES[path];
   for(const [key,value] of url.searchParams){if(['fecha','todos'].includes(key)&&path==='api/cartera-gt-descarga')target.searchParams.set(key,value);}
+  // Solo la comprobación de lectura explícita; conserva autorización y firma del query.
+  if(path==='api/cobranza-gt-live'&&url.searchParams.get('verifyAccess')==='1')target.searchParams.set('verifyAccess','1');
   const signedPath=target.pathname+target.search,now=Math.floor(Date.now()/1000);
   const key=createPrivateKey({key:Buffer.from(process.env.MXK_MODULE_PRIVATE_KEY || '','base64'),format:'der',type:'pkcs8'});
   if(key.asymmetricKeyType!=='ed25519')return fail(503,'Clave no válida.');
