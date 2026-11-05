@@ -1,3 +1,5 @@
+import {modulePublicKey} from '../lib/module-public-key.mjs';
+import {previewWorkloadToken} from '../lib/preview-workload.mjs';
 import {OAuth2Client} from 'google-auth-library';
 import {getPolicy, permissions} from '../lib/policy.mjs';
 import {ORIGIN, getSession, challenge, sessionCookie, cookieValue, unseal, sameOrigin, newSession} from '../lib/session.mjs';
@@ -13,6 +15,11 @@ export default async function handler(req, res) {
     if (!clientId || process.env.VERCEL_ENV === 'production') return send(503,{error:'Acceso Preview pendiente de configurar.'});
     if (req.method === 'GET') {
       const session = getSession(req);
+      if(new URL(req.url,ORIGIN).searchParams.get('view')==='module-key'){
+        if(!session)return send(401,{error:'Sesión requerida.'});
+        if(!session.permissions.administrar||session.email!=='data@maxikash.mx')return send(403,{error:'Acceso exclusivo del administrador de permisos.'});
+        return send(200,{...modulePublicKey(),environment:'preview',oidcAvailable:!!(await previewWorkloadToken())});
+      }
       if (new URL(req.url,ORIGIN).searchParams.get('view') === 'permissions') {
         if (!session) return send(401,{error:'Sesión requerida.'});
         if (!session.permissions.administrar) return send(403,{error:'Acceso exclusivo del administrador de permisos.'});

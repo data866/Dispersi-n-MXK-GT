@@ -1,5 +1,7 @@
 import {createPrivateKey,sign,createHash} from 'node:crypto';
+import {previewWorkloadToken} from '../lib/preview-workload.mjs';
 import {getSession,ORIGIN} from '../lib/session.mjs';
+const CARTERA_PREVIEW_ORIGIN='https://cartera-guatemala-git-feat-sesion-central-maxikash-data-3272.vercel.app';
 const ROUTES={'':'/api/dashboard','dashboard':'/api/dashboard','api/cartera-gt-live':'/api/cartera-gt-live','api/cobranza-gt-live':'/api/cobranza-gt-live','api/cartera-gt-descarga':'/api/cartera-gt-descarga','api/diagnostico-mysql-gt':'/api/diagnostico-mysql-gt'};
 export default async function handler(req,res){
  res.setHeader('Cache-Control','no-store');res.setHeader('X-Content-Type-Options','nosniff');
@@ -25,7 +27,7 @@ export default async function handler(req,res){
   if(diagnostic ? !(session.permissions.administrar && session.email==='data@maxikash.mx') : !session.permissions.cartera)return fail(403,dashboard?'Tu cuenta no tiene permiso de consulta de Cartera Guatemala. La administración del portal no concede acceso a este módulo.':'Sin permiso de Cartera.',dashboard);
   if(path==='api/cartera-gt-descarga'&&!session.permissions.descargaCartera)return fail(403,'Sin permiso de descarga.');
   const target=new URL(process.env.MXK_CARTERA_URL || 'https://cartera-guatemala-git-feat-sesion-central-maxikash-data-3272.vercel.app/');
-  if(target.protocol!=='https:'||target.username||target.password||target.port||target.pathname!=='/'||!target.hostname.endsWith('.vercel.app')||target.search||target.hash)return fail(503,'Destino Preview pendiente.');
+  if(target.protocol!=='https:'||target.username||target.password||target.port||target.pathname!=='/'||target.origin!==CARTERA_PREVIEW_ORIGIN||target.search||target.hash)return fail(503,'Destino Preview pendiente.');
   target.pathname=ROUTES[path];
   for(const [key,value] of url.searchParams){if(['fecha','todos'].includes(key)&&path==='api/cartera-gt-descarga')target.searchParams.set(key,value);}
   const signedPath=target.pathname+target.search,now=Math.floor(Date.now()/1000);
@@ -33,7 +35,9 @@ export default async function handler(req,res){
   if(key.asymmetricKeyType!=='ed25519')return fail(503,'Clave no válida.');
   const payload={iss:ORIGIN,aud:'maxikash:cartera:preview',module:'cartera',email:session.email,sub:session.sub,iat:now,exp:Math.min(now+30,session.expiresAt),request:createHash('sha256').update('GET\n'+signedPath).digest('base64url')};
   const value='MXK1.'+Buffer.from(JSON.stringify(payload)).toString('base64url');
-  const response=await fetch(target,{redirect:'manual',headers:{Authorization:'Bearer '+value+'.'+sign(null,Buffer.from(value),key).toString('base64url')},signal:AbortSignal.timeout(60000),cache:'no-store'});
+  const oidcToken=await previewWorkloadToken();
+  if(!oidcToken)return fail(503,'El Preview del portal no dispone de identidad OIDC de Vercel.',dashboard);
+  const response=await fetch(target,{redirect:'manual',headers:{'x-vercel-trusted-oidc-idp-token':oidcToken,Authorization:'Bearer '+value+'.'+sign(null,Buffer.from(value),key).toString('base64url')},signal:AbortSignal.timeout(60000),cache:'no-store'});
   if(response.status>=300&&response.status<400){
    // No seguir redirecciones ni enviar la autorización firmada a otro destino.
    const location=new URL(response.headers.get('location')||'/',target);
