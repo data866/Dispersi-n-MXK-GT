@@ -15,7 +15,7 @@ export default async function handler(req,res){
   const diagnostic=path==='api/diagnostico-mysql-gt';
   if(diagnostic ? !(session.permissions.administrar && session.email==='data@maxikash.mx') : !session.permissions.cartera)return fail(403,'Sin permiso de Cartera.');
   if(path==='api/cartera-gt-descarga'&&!session.permissions.descargaCartera)return fail(403,'Sin permiso de descarga.');
-  const target=new URL(process.env.MXK_CARTERA_URL || '');
+  const target=new URL(process.env.MXK_CARTERA_URL || 'https://cartera-guatemala-git-feat-sesion-central-maxikash-data-3272.vercel.app/');
   if(target.protocol!=='https:'||target.username||target.password||target.port||target.pathname!=='/'||!target.hostname.endsWith('.vercel.app')||target.search||target.hash)return fail(503,'Destino Preview pendiente.');
   target.pathname=ROUTES[path];
   for(const [key,value] of url.searchParams){if(['fecha','todos'].includes(key)&&path==='api/cartera-gt-descarga')target.searchParams.set(key,value);}
