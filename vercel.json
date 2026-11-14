@@ -6,9 +6,16 @@
     },
     "api/distribuidores.mjs": {
       "maxDuration": 60
+    },
+    "api/cartera.mjs": {
+      "maxDuration": 60
     }
   },
   "rewrites": [
+    {
+      "source": "/modules/cartera/:path*",
+      "destination": "/api/cartera?path=:path*"
+    },
     {
       "source": "/modules/distribuidores/:path*",
       "destination": "/api/distribuidores?path=:path*"
