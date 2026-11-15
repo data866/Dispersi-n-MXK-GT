@@ -16,7 +16,7 @@ export default async function handler(req, res) {
       if (new URL(req.url,ORIGIN).searchParams.get('view') === 'permissions') {
         if (!session) return send(401,{error:'Sesión requerida.'});
         if (!session.permissions.administrar) return send(403,{error:'Acceso exclusivo del administrador de permisos.'});
-        return send(200,{users:Object.entries(getPolicy()).map(([email,rights])=>({email,...rights})),readOnly:true});
+        return send(200,{users:Object.keys(getPolicy()).map(email=>({email,...permissions(email)})),readOnly:true});
       }
       if (session) return send(200,{session});
       const login = challenge();
