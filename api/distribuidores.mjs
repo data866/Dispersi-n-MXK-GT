@@ -42,7 +42,11 @@ export default async function handler(req,res){
   res.setHeader('Content-Security-Policy',"frame-ancestors 'self'");
   for(const header of ['X-Rol','X-Can-Manage-Access']){const value=response.headers.get(header);if(value)res.setHeader(header,value);}
   stage='response';
-  const body=Buffer.from(await response.arrayBuffer());
+  let body=Buffer.from(await response.arrayBuffer());
+  if(path.endsWith('.html')){
+   const html=body.toString('utf8').replaceAll('Validando la sesión del portal…','');
+   body=Buffer.from(html.replace(/<\/head>/i,'<style>#loginGate:has(#gbtn),#loginGate:has(#loginMsg:empty){visibility:hidden}body:has(#loginGate:has(#loginMsg:empty):not([style*="display: none"])) > :not(#loginGate){visibility:hidden}</style></head>'));
+  }
   res.setHeader('Content-Encoding','gzip');return res.end(gzipSync(body));
  }catch(error){console.error('MXK gateway:',stage,error.name,error.message,error.cause?.code || error.cause?.message || '');return fail(503,'Integración de Distribuidores pendiente de configurar.');}
 }
