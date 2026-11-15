@@ -41,6 +41,10 @@ export default async function handler(req,res){
   }
   res.statusCode=response.status;res.setHeader('Content-Type',response.headers.get('content-type')||'application/json');
   if(dashboard)res.setHeader('Content-Security-Policy',"frame-ancestors 'self'");
-  return res.end(Buffer.from(await response.arrayBuffer()));
+  const body=Buffer.from(await response.arrayBuffer());
+  if(dashboard && response.ok && response.headers.get('content-type')?.includes('text/html')){
+   return res.end(body.toString('utf8').replace(/<\/head>/i,'<style>#loginOverlay:has(#loginMsg:empty){visibility:hidden}body:has(#loginOverlay:not(.hidden)) > :not(#loginOverlay){visibility:hidden}</style></head>'));
+  }
+  return res.end(body);
  }catch(e){console.error('Cartera gateway:',e.name);return fail(503,'No fue posible conectar con Cartera.');}
 }
