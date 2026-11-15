@@ -1,6 +1,6 @@
 import {createPrivateKey,sign,createHash} from 'node:crypto';
 import {getSession,ORIGIN} from '../lib/session.mjs';
-const CARTERA_ORIGIN='https://cartera-guatemala-6c88ab1ac-data-3272.vercel.app';
+const CARTERA_ORIGIN='https://cartera-guatemala-22gbr0975-data-3272.vercel.app';
 const ROUTES={'':'/api/dashboard','dashboard':'/api/dashboard','api/cartera-gt-live':'/api/cartera-gt-live','api/cobranza-gt-live':'/api/cobranza-gt-live','api/cartera-gt-descarga':'/api/cartera-gt-descarga'};
 export default async function handler(req,res){
  res.setHeader('Cache-Control','no-store');res.setHeader('X-Content-Type-Options','nosniff');
