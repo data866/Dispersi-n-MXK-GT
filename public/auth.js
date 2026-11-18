@@ -12,7 +12,7 @@ const post = async body => {
 };
 const showError = error => {const el=root.querySelector('[role="status"]');if(el)el.textContent=error.message;};
 async function start(session) {
- host.remove(); main.hidden=false; main.inert=false;
+ root.innerHTML='<style>:host{display:block}section{min-height:100vh;background:#0047bb;color:white;display:flex;flex-direction:column;align-items:center;justify-content:center;font:14px Arial}.track{position:relative;width:280px;height:55px;overflow:hidden}img{position:absolute;width:55px;height:35px;animation:travel 3s linear infinite,wave .7s ease-in-out infinite alternate}@keyframes travel{from{left:-55px}to{left:100%}}@keyframes wave{from{transform:perspective(160px) rotateY(-15deg) skewY(-4deg)}to{transform:perspective(160px) rotateY(15deg) skewY(4deg)}}@media(prefers-reduced-motion:reduce){img{animation:none;left:112px}}</style><section role="status"><div class="track"><img src="/bandera-guatemala.jpg" width="55" height="35" alt="Bandera de Guatemala"></div><p>Cargando Cartera Guatemala...</p></section>';
  const tools=document.createElement('div');document.body.prepend(tools); const ui=tools.attachShadow({mode:'open'});
  ui.innerHTML='<style>:host{display:block;font:12px Arial;background:#fff;color:#06388e}section{display:flex;justify-content:flex-end;align-items:center;gap:12px;padding:8px 20px;flex-wrap:wrap}button{background:white;color:#0047bb;border:1px solid #cbd6ed;border-radius:6px;padding:6px 10px;cursor:pointer}dialog{max-width:94vw;max-height:80vh;border:1px solid #cbd6ed;border-radius:10px;padding:20px;color:#132d53}table{border-collapse:collapse;font-size:12px}td,th{padding:9px;border-bottom:1px solid #e2e9f2;text-align:left}</style><section><span id="identity"></span><button id="logout">Salir</button></section><dialog><h2>Permisos por módulo</h2><p>Consulta de permisos actuales. La edición aún no está habilitada.</p><div id="permissions"></div><button id="close">Cerrar</button></dialog>';
  ui.getElementById('identity').textContent=session.email;
@@ -23,7 +23,7 @@ async function start(session) {
  }
  ui.getElementById('close').onclick=()=>ui.querySelector('dialog').close();
  const {summaryView}=await import('/summary-view.mjs');window.summaryView=summaryView;
- const script=document.createElement('script');script.src='/dashboard.js';document.body.append(script);
+ const script=document.createElement('script');script.src='/dashboard.js';script.onload=()=>{host.remove();main.hidden=false;main.inert=false;};script.onerror=()=>{root.querySelector('p').textContent='No fue posible cargar el portal. Recarga la página.';root.querySelector('img').style.animation='none';};document.body.append(script);
  // An expired session returns to the gate; it is never renewed from browser claims.
  setTimeout(()=>location.reload(),Math.max(0,session.expiresAt*1000-Date.now()+500));
 }
