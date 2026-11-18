@@ -65,7 +65,7 @@ function inventory(){const r=requestRows(),weeks=Object.create(null);for(const x
 function detail(){const r=requestRows(),o=data.offers.filter(x=>x.month===currentMonth()&&selected(x));return `<section class="detail">${rawTable(r,[{l:'fecha_solicitud',v:x=>x.date},{l:'sucursal',v:x=>x.branch},{l:'distribuidor',v:x=>x.distributor},{l:'seguimiento',v:x=>x.followup},{l:'usuario',v:x=>x.user},{l:'Total solicitudes',r:1,v:x=>nf.format(x.total),e:x=>x.total},{l:'Aprobadas',r:1,v:x=>nf.format(x.approved),e:x=>x.approved},{l:'Rechazadas',r:1,v:x=>nf.format(x.rejected),e:x=>x.rejected},{l:'Sin terminar',r:1,v:x=>nf.format(x.unfinished),e:x=>x.unfinished}],'detail','Detalle de solicitudes',true)}${rawTable(o,[{l:'Mes',v:x=>x.month},{l:'etapa',v:x=>x.stage},{l:'modelo_moto',v:x=>x.model},{l:'marca_moto',v:x=>x.brand},{l:'distribuidor',v:x=>x.distributor},{l:'sucursal',v:x=>x.branch},{l:'Total ofertas',r:1,v:x=>nf.format(x.total),e:x=>x.total},{l:'Activadas',r:1,v:x=>nf.format(x.activated),e:x=>x.activated},{l:'monto_financiar activado',r:1,v:x=>money(x.amount),e:x=>x.amount}],'detail','Detalle de ofertas',true)}</section>`;}
 function summary(){return window.summaryView?window.summaryView(data,{month:currentMonth(),distributor:document.getElementById('distributor').value,branch:document.getElementById('branch').value}):'<div class="empty">Cargando resumen…</div>'; }
 window.addEventListener('summary-ready',()=>{if(data&&active==='summary')render();});
-function render(){document.getElementById('heading').classList.toggle('summary-title',active==='summary');exportTables.clear();exportCounter=0;let tab=tabs.find(t=>t[0]===active);document.getElementById('heading').textContent=active==='requests'?'Solicitudes Únicas Totales':active==='inventory'?'':active==='summary'?'Resumen General':tab[1];document.getElementById('tabs').innerHTML=tabs.map(([id,l])=>`<button class="${id===active?'active':''}" data-id="${id}">${l}</button>`).join('');document.querySelectorAll('[data-id]').forEach(b=>b.onclick=()=>{active=b.dataset.id;render()});document.querySelector('.filters').style.display=['cartera','distribuidores'].includes(active)?'none':'';document.getElementById('view').innerHTML=active==='cartera'?'<div class="embedded-dashboard"><iframe title="Cartera Guatemala" src="/modules/cartera/dashboard" loading="lazy" referrerpolicy="strict-origin-when-cross-origin"></iframe><p>Si el sitio externo no permite mostrarse aquí, <a href="/modules/cartera/dashboard" target="_blank" rel="noopener noreferrer">abrir Cartera Guatemala</a>.</p></div>':active==='distribuidores'?'<div class="embedded-dashboard"><iframe title="Dash Distribuidores" src="/modules/distribuidores/Distribuidores.html" referrerpolicy="strict-origin-when-cross-origin" loading="lazy"></iframe></div>':({requests,dispersals,inventory,detail,summary})[active]()}
+function render(){if(!data&&!['cartera','distribuidores'].includes(active))return;document.getElementById('heading').classList.toggle('summary-title',active==='summary');exportTables.clear();exportCounter=0;let tab=tabs.find(t=>t[0]===active);document.getElementById('heading').textContent=active==='requests'?'Solicitudes Únicas Totales':active==='inventory'?'':active==='summary'?'Resumen General':tab[1];document.getElementById('tabs').innerHTML=tabs.map(([id,l])=>`<button class="${id===active?'active':''}" data-id="${id}">${l}</button>`).join('');document.querySelectorAll('[data-id]').forEach(b=>b.onclick=()=>{active=b.dataset.id;render()});document.querySelector('.filters').style.display=['cartera','distribuidores'].includes(active)?'none':'';document.getElementById('view').innerHTML=active==='cartera'?'<div class="embedded-dashboard"><iframe title="Cartera Guatemala" src="/modules/cartera/dashboard" loading="lazy" referrerpolicy="strict-origin-when-cross-origin"></iframe><p>Si el sitio externo no permite mostrarse aquí, <a href="/modules/cartera/dashboard" target="_blank" rel="noopener noreferrer">abrir Cartera Guatemala</a>.</p></div>':active==='distribuidores'?'<div class="embedded-dashboard"><iframe title="Dash Distribuidores" src="/modules/distribuidores/Distribuidores.html" referrerpolicy="strict-origin-when-cross-origin" loading="lazy"></iframe></div>':({requests,dispersals,inventory,detail,summary})[active]();showModuleLoader()}
 
 function options(id,values){const el=document.getElementById(id),v=el.value;el.replaceChildren(new Option('Todos',''),...values.map(x=>new Option(x,x)));el.value=values.includes(v)?v:'';}
 function refreshBranches(){options('branch',[...new Set([...data.requests,...data.offers].filter(r=>!document.getElementById('distributor').value||r.distributor===document.getElementById('distributor').value).map(r=>r.branch))].sort());}
@@ -83,10 +83,10 @@ if(!data.dispersions.some(r=>r.date==='2026-11-03'&&Number(r.credits)>0)){
     activations:data.historicalTotals.activations+1,
     sales:data.historicalTotals.sales+11200};
 }
-if(!document.getElementById('month').value)document.getElementById('month').value=data.updatedAt.slice(0,7);options('distributor',[...new Set([...data.requests,...data.offers].map(r=>r.distributor))].sort());refreshBranches();document.getElementById('status').textContent='Corte: '+data.updatedAt.replace('T',' ')+' · '+(manual?'Actualización completada':'Revisión automática cada 5 min');render();}catch{document.getElementById('status').textContent='No fue posible actualizar desde Sheets.';if(!data)document.getElementById('view').innerHTML='<div class="empty">No fue posible cargar los datos.</div>';}finally{loading=false;if(refreshButton){refreshButton.disabled=false;refreshButton.textContent='↻ Actualizar datos';}}}
+if(!document.getElementById('month').value)document.getElementById('month').value=data.updatedAt.slice(0,7);options('distributor',[...new Set([...data.requests,...data.offers].map(r=>r.distributor))].sort());refreshBranches();document.getElementById('status').textContent='Corte: '+data.updatedAt.replace('T',' ')+' · '+(manual?'Actualización completada':'Revisión automática cada 5 min');if(!['cartera','distribuidores'].includes(active)||!document.querySelector('#view iframe'))render();}catch{document.getElementById('status').textContent='No fue posible actualizar desde Sheets.';if(!data&&!['cartera','distribuidores'].includes(active))document.getElementById('view').innerHTML='<div class="empty">No fue posible cargar los datos.</div>';}finally{loading=false;if(refreshButton){refreshButton.disabled=false;refreshButton.textContent='↻ Actualizar datos';}}}
 document.getElementById('refresh-data').onclick=()=>load(true);
 document.getElementById('apply').onclick=()=>{if(data)render();};document.getElementById('month').onchange=()=>{if(data)render();};document.getElementById('distributor').onchange=()=>{if(data){refreshBranches();render();}};document.getElementById('branch').onchange=()=>{if(data)render();};
-load();setInterval(()=>{if(!document.hidden)load();},300000);document.addEventListener('visibilitychange',()=>{if(!document.hidden)load();});
+setInterval(()=>{if(!document.hidden)load();},300000);document.addEventListener('visibilitychange',()=>{if(!document.hidden)load();});
 
 // XLSX nativo sin librerías externas. ZIP sin compresión, válido para Excel.
 const xmlEsc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&apos;'}[c]));
@@ -96,3 +96,69 @@ function columnName(n){let s='';for(n++;n;n=Math.floor((n-1)/26))s=String.fromCh
 function downloadXlsx(item){const all=[item.headers,...item.rows];const sheetRows=all.map((row,ri)=>`<row r="${ri+1}">${row.map((v,ci)=>{const ref=columnName(ci)+(ri+1);if(ri>0&&typeof v==='number'&&Number.isFinite(v))return `<c r="${ref}"><v>${v}</v></c>`;return `<c r="${ref}" t="inlineStr"><is><t>${xmlEsc(v)}</t></is></c>`;}).join('')}</row>`).join('');const files=[['[Content_Types].xml','<?xml version="1.0" encoding="UTF-8"?><Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/><Override PartName="/xl/worksheets/sheet1.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/></Types>'],['_rels/.rels','<?xml version="1.0" encoding="UTF-8"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="xl/workbook.xml"/></Relationships>'],['xl/workbook.xml','<?xml version="1.0" encoding="UTF-8"?><workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><sheets><sheet name="Datos" sheetId="1" r:id="rId1"/></sheets></workbook>'],['xl/_rels/workbook.xml.rels','<?xml version="1.0" encoding="UTF-8"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet1.xml"/></Relationships>'],['xl/worksheets/sheet1.xml',`<?xml version="1.0" encoding="UTF-8"?><worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><sheetData>${sheetRows}</sheetData></worksheet>`]];const blob=zipStore(files),url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download=(item.title.normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-zA-Z0-9_-]+/g,'_').slice(0,65)||'MAXIKASH')+'_'+currentMonth()+'.xlsx';document.body.append(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),2000);}
 document.getElementById('view').addEventListener('click',e=>{const button=e.target.closest('[data-export]');if(!button)return;const item=exportTables.get(button.dataset.export);if(item)downloadXlsx(item);});
 
+
+let stopModuleLoader=()=>{};
+function showModuleLoader(){
+ stopModuleLoader();
+ const frame=document.querySelector('#view .embedded-dashboard iframe');
+ if(!frame)return;
+ const box=frame.parentElement;
+ box.style.position='relative';
+ const loader=document.createElement('div');
+ loader.className='module-loader';
+ loader.setAttribute('role','status');
+ loader.innerHTML='<div class="module-loader-track"><img src="/bandera-guatemala.jpg" width="55" height="35" alt="Bandera de Guatemala"></div><p></p>';
+ loader.querySelector('p').textContent='Cargando '+frame.title+'...';
+ box.append(loader);
+ frame.style.visibility='hidden';
+ let observer;
+ stopModuleLoader=()=>observer?.disconnect();
+ function inspect(){
+  const doc=frame.contentDocument;
+  if(!doc || !doc.body)return;
+  const gate=doc.getElementById('loginOverlay') || doc.getElementById('loginGate');
+  const message=doc.getElementById('loginMsg')?.textContent.trim();
+  const hidden=gate && (gate.classList.contains('hidden') || gate.style.display==='none');
+  if(gate && !hidden && !message)return;
+  if(gate && !hidden && /^(Cargando|Validando|Verificando)/i.test(message || ''))return;
+  loader.remove();
+  frame.style.visibility='';
+  observer?.disconnect();
+ }
+ frame.addEventListener('load',()=>{
+  observer?.disconnect();
+  try{
+   const doc=frame.contentDocument;
+   if(doc?.body){
+    observer=new MutationObserver(inspect);
+    observer.observe(doc.body,{subtree:true,childList:true,attributes:true,characterData:true});
+   }
+   inspect();
+  }catch{
+   loader.remove();
+   frame.style.visibility='';
+  }
+ });
+ frame.addEventListener('error',()=>{
+  observer?.disconnect();
+  loader.remove();
+  frame.style.visibility='';
+  const message=document.createElement('p');
+  message.setAttribute('role','alert');
+  message.textContent='No fue posible cargar '+frame.title+'. Vuelve a seleccionar el módulo.';
+  box.append(message);
+ });
+}
+const moduleLoaderStyle=document.createElement('style');
+moduleLoaderStyle.textContent=`
+.module-loader{position:absolute;inset:0;min-height:340px;background:#0047bb;color:#fff;display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:2;font:14px Arial,sans-serif}
+.module-loader-track{width:min(280px,70%);height:55px;overflow:hidden;position:relative}
+.module-loader-track img{position:absolute;width:55px;height:35px;object-fit:fill;animation:gt-travel 3s linear infinite,gt-wave .7s ease-in-out infinite alternate}
+@keyframes gt-travel{from{left:-55px}to{left:100%}}
+@keyframes gt-wave{from{transform:perspective(160px) rotateY(-15deg) skewY(-4deg)}to{transform:perspective(160px) rotateY(15deg) skewY(4deg)}}
+@media(prefers-reduced-motion:reduce){.module-loader-track img{animation:none;left:calc(50% - 27.5px)}}
+`;
+document.head.append(moduleLoaderStyle);
+
+// Render module navigation and its loader before the portal snapshot arrives.
+render();load();
