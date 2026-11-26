@@ -60,7 +60,7 @@ function showModuleLoader(){
  loader.innerHTML='<div class="module-loader-track"><img src="/bandera-guatemala.jpg" width="55" height="35" alt="Bandera de Guatemala"></div><p></p>';
  loader.querySelector('p').textContent='Cargando '+frame.title+'...';
  box.append(loader);
- frame.style.visibility='hidden';
+ frame.style.visibility='';
  let observer;
  stopModuleLoader=()=>observer?.disconnect();
  function inspect(){
@@ -101,7 +101,7 @@ function showModuleLoader(){
 }
 const moduleLoaderStyle=document.createElement('style');
 moduleLoaderStyle.textContent=`
-.module-loader{position:absolute;inset:0;min-height:340px;background:#0047bb;color:#fff;display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:2;font:14px Arial,sans-serif}
+.module-loader{position:absolute;inset:0;min-height:340px;background:rgba(235,243,255,.72);backdrop-filter:blur(14px) saturate(135%);-webkit-backdrop-filter:blur(14px) saturate(135%);border:1px solid rgba(255,255,255,.65);border-radius:14px;box-shadow:inset 0 1px 0 rgba(255,255,255,.65);color:#06388e;display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:2;font:14px Arial,sans-serif}
 .module-loader-track{width:min(280px,70%);height:55px;overflow:hidden;position:relative}
 .module-loader-track img{position:absolute;width:55px;height:35px;object-fit:fill;animation:gt-travel 3s linear infinite,gt-wave .7s ease-in-out infinite alternate}
 @keyframes gt-travel{from{left:-55px}to{left:100%}}
